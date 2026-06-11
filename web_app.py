@@ -373,6 +373,28 @@ def history_page():
         return "错误: " + str(e), 500
 
 
+@app.route('/api/set_push_interval')
+def api_set_push_interval():
+    """设置推送间隔（小时）"""
+    try:
+        interval = request.args.get('interval', '4')
+        hours = int(interval)
+        if hours not in [1, 2, 4, 6, 8, 12, 24]:
+            return jsonify({'success': False, 'error': '无效的间隔值，仅支持 1/2/4/6/8/12/24 小时'})
+        
+        cfg = mon.load_config()
+        cfg['feishu']['price_push_interval_hours'] = hours
+        mon.save_config(cfg)
+        
+        # 重置上次推送时间，让新的间隔立即生效
+        mon._save_last_push_time(0)
+        
+        return jsonify({'success': True, 'interval': hours, 'message': f'推送间隔已设置为 {hours} 小时'})
+    except Exception as e:
+        mon.logger.error(f"设置推送间隔失败: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("ETH EMA 预警系统启动 (端口: %d)" % port)
