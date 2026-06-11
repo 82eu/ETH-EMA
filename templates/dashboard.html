@@ -130,10 +130,17 @@ body { background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%); min-height
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
       <div>
         <div style="font-size: 14px; font-weight: 600; color: #e2e8f0;">📊 价格推送设置</div>
-        <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;" id="push-interval-info">当前推送间隔：--</div>
+        <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">当前推送间隔：<span id="current-interval">每 4 小时</span></div>
       </div>
-      <div style="display: flex; gap: 8px;">
-        <div style="font-size: 12px; color: #34d399;">飞书机器人已配置</div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <select id="interval-select" style="padding: 6px 10px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 12px;" onchange="updatePushInterval()">
+          <option value="1">1小时</option>
+          <option value="2">2小时</option>
+          <option value="4" selected>4小时</option>
+          <option value="6">6小时</option>
+          <option value="8">8小时</option>
+          <option value="12">12小时</option>
+        </select>
         <button onclick="refreshData(); alert('已强制刷新！');" style="padding: 6px 12px; background: rgba(99,102,241,0.25); color: #fff; border: 1px solid rgba(99,102,241,0.5); border-radius: 8px; font-size: 12px; cursor: pointer;">🔄 刷新数据</button>
       </div>
     </div>
@@ -240,7 +247,7 @@ body { background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%); min-height
 var lastPrice = null;
 var currentTf = document.querySelector('.tab.active') ? document.querySelector('.tab.active').getAttribute('data-tf') : '15m';
 var _currentPriceRanges = [];
-var _countdown = 5;
+var _countdown = 30;
 var _sourcesExpanded = false;
 
 // 初始化价格区间（后端渲染时传入）
@@ -457,8 +464,8 @@ function refreshData() {
             tableBody.innerHTML = rows;
         }
 
-        // 重置倒计时
-        _countdown = 5;
+        // 重置倒计时（30秒）
+        _countdown = 30;
         updateCountdown();
 
         // 顶部指示灯
@@ -623,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function() {
     renderPriceRanges();
     updateCountdown();
     refreshData();
-    // 启动数据刷新循环（确保不会因为异常而停止）
+    // 启动数据刷新循环（30秒刷新一次）
     (function startRefreshLoop() {
         refreshData();
         setTimeout(function() {
@@ -631,16 +638,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 startRefreshLoop();
             } catch(e) {
                 console.error('刷新循环异常:', e);
-                setTimeout(startRefreshLoop, 5000);
+                setTimeout(startRefreshLoop, 30000);
             }
-        }, 5000);
+        }, 30000);
     })();
     setInterval(function() {
         _countdown--;
-        if (_countdown < 1) _countdown = 5;
+        if (_countdown < 1) _countdown = 30;
         updateCountdown();
     }, 1000);
 });
+
+// 更新推送间隔
+function updatePushInterval() {
+    var select = document.getElementById('interval-select');
+    var interval = select.value;
+    var span = document.getElementById('current-interval');
+    if (span) {
+        span.textContent = '每 ' + interval + ' 小时';
+    }
+    fetch('/api/set_push_interval?interval=' + interval)
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            alert('推送间隔已设置为每 ' + interval + ' 小时');
+        } else {
+            alert('设置失败：' + (res.error || '未知错误'));
+        }
+    }).catch(function(err) {
+        alert('请求失败：' + err);
+    });
+}
 </script>
 </body>
 </html>
