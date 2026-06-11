@@ -134,6 +134,9 @@ body { background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%); min-height
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
         <select id="interval-select" style="padding: 6px 10px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 12px;" onchange="updatePushInterval()">
+          <option value="0.0083">30秒</option>
+          <option value="0.0167">1分钟</option>
+          <option value="0.5">30分钟</option>
           <option value="1">1小时</option>
           <option value="2">2小时</option>
           <option value="4" selected>4小时</option>
@@ -329,22 +332,36 @@ function refreshData() {
     fetch(url, { method: 'GET', cache: 'no-store', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } })
     .then(function(resp) { return resp.json(); })
     .then(function(data) {
-        // 更新顶部价格（修复类型比较问题）
+        // 更新顶部价格（简化逻辑，确保每次都能更新）
         if (data.price !== undefined && data.price !== null) {
             var el = document.getElementById('big-price');
             if (el) {
                 var priceNum = parseFloat(data.price);
-                var newVal = '$' + priceNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                if (el.textContent !== newVal) {
-                    if (lastPrice !== null && !isNaN(lastPrice)) {
-                        if (priceNum > lastPrice) el.classList.add('price-flash-up');
-                        else if (priceNum < lastPrice) el.classList.add('price-flash-down');
-                    } else {
-                        el.classList.add('price-flash');
+                if (!isNaN(priceNum) && priceNum > 0) {
+                    var newVal = '$' + priceNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    // 始终更新价格（确保数据同步）
+                    if (el.textContent !== newVal) {
+                        if (lastPrice !== null && !isNaN(lastPrice)) {
+                            if (priceNum > lastPrice) {
+                                el.classList.remove('price-flash', 'price-flash-down');
+                                el.classList.add('price-flash-up');
+                            } else if (priceNum < lastPrice) {
+                                el.classList.remove('price-flash', 'price-flash-up');
+                                el.classList.add('price-flash-down');
+                            } else {
+                                el.classList.remove('price-flash-up', 'price-flash-down');
+                                el.classList.add('price-flash');
+                            }
+                        } else {
+                            el.classList.remove('price-flash-up', 'price-flash-down');
+                            el.classList.add('price-flash');
+                        }
+                        el.textContent = newVal;
+                        setTimeout(function() { 
+                            el.classList.remove('price-flash', 'price-flash-up', 'price-flash-down'); 
+                        }, 800);
+                        lastPrice = priceNum;
                     }
-                    el.textContent = newVal;
-                    setTimeout(function() { el.classList.remove('price-flash', 'price-flash-up', 'price-flash-down'); }, 1000);
-                    lastPrice = priceNum;
                 }
             }
         }
@@ -654,14 +671,19 @@ function updatePushInterval() {
     var select = document.getElementById('interval-select');
     var interval = select.value;
     var span = document.getElementById('current-interval');
+    // 获取选中选项的显示文本
+    var displayText = '';
+    if (select.options[select.selectedIndex]) {
+        displayText = select.options[select.selectedIndex].text;
+    }
     if (span) {
-        span.textContent = '每 ' + interval + ' 小时';
+        span.textContent = '每 ' + displayText;
     }
     fetch('/api/set_push_interval?interval=' + interval)
     .then(function(r) { return r.json(); })
     .then(function(res) {
         if (res.success) {
-            alert('推送间隔已设置为每 ' + interval + ' 小时');
+            alert('推送间隔已设置为：每 ' + displayText);
         } else {
             alert('设置失败：' + (res.error || '未知错误'));
         }
