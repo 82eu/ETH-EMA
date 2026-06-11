@@ -265,13 +265,17 @@ def load_config():
     env_also = os.environ.get('FEISHU_ALSO_EMAIL', '').strip().lower()
     if env_also in ['1', 'true', 'yes']:
         cfg['feishu']['also_send_email'] = True
-    # 价格推送间隔（小时）: 1, 2, 4, 6, 8, 12, 24
+    # 价格推送间隔（小时）: 0.0083(30秒), 0.0167(1分钟), 0.5(30分钟), 1, 2, 4, 6, 8, 12, 24
     cfg['feishu'].setdefault('price_push_interval_hours', 4)
     env_interval = os.environ.get('FEISHU_PUSH_INTERVAL', '').strip()
-    if env_interval.isdigit():
-        hours = int(env_interval)
-        if hours in [1, 2, 4, 6, 8, 12, 24]:
-            cfg['feishu']['price_push_interval_hours'] = hours
+    if env_interval:
+        try:
+            hours = float(env_interval)
+            valid_intervals = [0.0083, 0.0167, 0.5, 1, 2, 4, 6, 8, 12, 24]
+            if hours in valid_intervals:
+                cfg['feishu']['price_push_interval_hours'] = hours
+        except ValueError:
+            pass
 
     # 价格区间预警配置
     if 'price_ranges' not in cfg or not isinstance(cfg['price_ranges'], list):
@@ -795,7 +799,12 @@ def _should_push_price_now(cfg=None):
     last_ts = _load_last_push_time()
     # 计算间隔秒数
     interval_seconds = interval_hours * 3600
-    if now_ts - last_ts >= interval_seconds - 60:  # 留 60 秒容差
+    
+    # 对于小间隔（小于5分钟），减少容差
+    tolerance = 5 if interval_hours < 0.083 else 60
+    
+    if now_ts - last_ts >= interval_seconds - tolerance:
+        logger.info(f"⏰ 推送检查: 间隔={interval_hours}小时({interval_seconds:.1f}秒), 上次推送={last_ts}, 现在={now_ts}, 差值={now_ts-last_ts:.1f}秒, 需要={interval_seconds-tolerance:.1f}秒")
         return True
     return False
 
