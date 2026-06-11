@@ -378,9 +378,11 @@ def api_set_push_interval():
     """设置推送间隔（小时）"""
     try:
         interval = request.args.get('interval', '4')
-        hours = int(interval)
-        if hours not in [1, 2, 4, 6, 8, 12, 24]:
-            return jsonify({'success': False, 'error': '无效的间隔值，仅支持 1/2/4/6/8/12/24 小时'})
+        hours = float(interval)
+        # 支持的间隔：30秒(0.0083), 1分钟(0.0167), 30分钟(0.5), 1小时(1), 2小时(2), 4小时(4), 6小时(6), 8小时(8), 12小时(12), 24小时(24)
+        valid_intervals = [0.0083, 0.0167, 0.5, 1, 2, 4, 6, 8, 12, 24]
+        if hours not in valid_intervals:
+            return jsonify({'success': False, 'error': '无效的间隔值，仅支持 30秒/1分钟/30分钟/1小时/2小时/4小时/6小时/8小时/12小时/24小时'})
         
         cfg = mon.load_config()
         cfg['feishu']['price_push_interval_hours'] = hours
@@ -389,7 +391,14 @@ def api_set_push_interval():
         # 重置上次推送时间，让新的间隔立即生效
         mon._save_last_push_time(0)
         
-        return jsonify({'success': True, 'interval': hours, 'message': f'推送间隔已设置为 {hours} 小时'})
+        # 转换为可读的时间描述
+        interval_desc = ''
+        if hours == 0.0083: interval_desc = '30秒'
+        elif hours == 0.0167: interval_desc = '1分钟'
+        elif hours == 0.5: interval_desc = '30分钟'
+        else: interval_desc = f'{int(hours)}小时'
+        
+        return jsonify({'success': True, 'interval': hours, 'message': f'推送间隔已设置为 {interval_desc}'})
     except Exception as e:
         mon.logger.error(f"设置推送间隔失败: {e}")
         return jsonify({'success': False, 'error': str(e)})
