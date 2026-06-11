@@ -605,6 +605,8 @@
             };
         }
 
+        var _priceFlashTimer = null;
+
         function updatePrice(price) {
             var el = document.getElementById('current-price');
             var priceNum = parseFloat(price);
@@ -616,18 +618,31 @@
                 });
                 
                 if (el.textContent !== newVal) {
+                    // 先清除之前的定时器
+                    if (_priceFlashTimer) {
+                        clearTimeout(_priceFlashTimer);
+                        _priceFlashTimer = null;
+                    }
+                    
                     if (priceNum > _lastPrice && _lastPrice > 0) {
-                        el.classList.remove('price-flash-down');
-                        el.classList.add('price-flash-up');
+                        // 价格上涨 - 绿色
+                        el.style.color = '#00ff88';
                     } else if (priceNum < _lastPrice && _lastPrice > 0) {
-                        el.classList.remove('price-flash-up');
-                        el.classList.add('price-flash-down');
+                        // 价格下跌 - 红色
+                        el.style.color = '#ff4757';
                     } else {
-                        el.classList.remove('price-flash-up', 'price-flash-down');
+                        // 首次加载或其他情况
+                        el.style.color = '#fff';
                     }
                     
                     el.textContent = newVal;
                     _lastPrice = priceNum;
+                    
+                    // 3秒后恢复白色
+                    _priceFlashTimer = setTimeout(function() {
+                        el.style.color = '#fff';
+                        _priceFlashTimer = null;
+                    }, 3000);
                 }
             }
         }
