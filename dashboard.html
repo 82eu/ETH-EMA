@@ -620,7 +620,18 @@ document.addEventListener('DOMContentLoaded', function() {
     renderPriceRanges();
     updateCountdown();
     refreshData();
-    setInterval(refreshData, 5000);
+    // 启动数据刷新循环（确保不会因为异常而停止）
+    (function startRefreshLoop() {
+        refreshData();
+        setTimeout(function() {
+            try {
+                startRefreshLoop();
+            } catch(e) {
+                console.error('刷新循环异常:', e);
+                setTimeout(startRefreshLoop, 5000);
+            }
+        }, 5000);
+    })();
     setInterval(function() {
         _countdown--;
         if (_countdown < 1) _countdown = 5;
