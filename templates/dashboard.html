@@ -132,7 +132,10 @@ body { background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%); min-height
         <div style="font-size: 14px; font-weight: 600; color: #e2e8f0;">📊 价格推送设置</div>
         <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;" id="push-interval-info">当前推送间隔：--</div>
       </div>
-      <div style="font-size: 12px; color: #34d399;">飞书机器人已配置</div>
+      <div style="display: flex; gap: 8px;">
+        <div style="font-size: 12px; color: #34d399;">飞书机器人已配置</div>
+        <button onclick="refreshData(); alert('已强制刷新！');" style="padding: 6px 12px; background: rgba(99,102,241,0.25); color: #fff; border: 1px solid rgba(99,102,241,0.5); border-radius: 8px; font-size: 12px; cursor: pointer;">🔄 刷新数据</button>
+      </div>
     </div>
   </div>
 
@@ -319,21 +322,22 @@ function refreshData() {
     fetch(url, { method: 'GET', cache: 'no-store', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } })
     .then(function(resp) { return resp.json(); })
     .then(function(data) {
-        // 更新顶部价格
-        if (data.price) {
+        // 更新顶部价格（修复类型比较问题）
+        if (data.price !== undefined && data.price !== null) {
             var el = document.getElementById('big-price');
             if (el) {
-                var newVal = '$' + Number(data.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                var priceNum = parseFloat(data.price);
+                var newVal = '$' + priceNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 if (el.textContent !== newVal) {
-                    if (lastPrice !== null) {
-                        if (data.price > lastPrice) el.classList.add('price-flash-up');
-                        else if (data.price < lastPrice) el.classList.add('price-flash-down');
+                    if (lastPrice !== null && !isNaN(lastPrice)) {
+                        if (priceNum > lastPrice) el.classList.add('price-flash-up');
+                        else if (priceNum < lastPrice) el.classList.add('price-flash-down');
                     } else {
                         el.classList.add('price-flash');
                     }
                     el.textContent = newVal;
                     setTimeout(function() { el.classList.remove('price-flash', 'price-flash-up', 'price-flash-down'); }, 1000);
-                    lastPrice = data.price;
+                    lastPrice = priceNum;
                 }
             }
         }
@@ -619,7 +623,18 @@ document.addEventListener('DOMContentLoaded', function() {
     renderPriceRanges();
     updateCountdown();
     refreshData();
-    setInterval(refreshData, 5000);
+    // 启动数据刷新循环（确保不会因为异常而停止）
+    (function startRefreshLoop() {
+        refreshData();
+        setTimeout(function() {
+            try {
+                startRefreshLoop();
+            } catch(e) {
+                console.error('刷新循环异常:', e);
+                setTimeout(startRefreshLoop, 5000);
+            }
+        }, 5000);
+    })();
     setInterval(function() {
         _countdown--;
         if (_countdown < 1) _countdown = 5;
