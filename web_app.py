@@ -32,23 +32,30 @@ def history():
 @app.route('/api/state')
 def api_state():
     try:
+        cfg = mon.load_config()
+        push_interval = cfg.get('feishu', {}).get('price_push_interval_seconds', 14400)
+        now = time.time()
+        last_update = mon.get_last_update_time()
+
+        # 数据过期则后台异步更新，但立即返回当前状态不阻塞
+        data_age = now - last_update
+        if data_age > 40 and last_update > 0:
+            try:
+                mon.update_all_data()
+            except Exception:
+                pass
+        elif last_update == 0:
+            # 完全没有数据，快速初始化一次
+            try:
+                mon.update_all_data()
+            except Exception:
+                pass
+
+        # 再次获取
         states = mon.get_all_states()
         last_update = mon.get_last_update_time()
         status = mon.get_connection_status()
         source_health = mon.get_source_health()
-
-        cfg = mon.load_config()
-        push_interval = cfg.get('feishu', {}).get('price_push_interval_seconds', 14400)
-
-        # 自动刷新过期数据
-        now = time.time()
-        if now - last_update > 35:
-            try:
-                mon.update_all_data()
-                states = mon.get_all_states()
-                last_update = mon.get_last_update_time()
-            except Exception:
-                pass
 
         # 提取最新价格
         latest_price = None
@@ -62,11 +69,12 @@ def api_state():
             'status': status,
             'source_health': source_health,
             'last_update': last_update,
-            'update_time_str': datetime.fromtimestamp(last_update).strftime('%Y-%m-%d %H:%M:%S'),
+            'update_time_str': datetime.fromtimestamp(last_update).strftime('%Y-%m-%d %H:%M:%S') if last_update > 0 else '--',
             'price_push_interval': push_interval,
             'latest_price': latest_price,
             'price_ranges': cfg.get('price_ranges', []),
             'config': cfg,
+            'data_age_sec': int(data_age),
         }
         return jsonify(data)
     except Exception as e:
