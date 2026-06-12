@@ -44,39 +44,63 @@
       <div class="tf-grid">
         <div class="tf-card" id="tf-5m">
           <div class="tf-label">5分钟</div>
-          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
-          <div class="tf-detail"></div>
+          <div class="tf-ema">
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 180</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 250</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+          </div>
+          <div class="tf-price-row">
+            <span class="tf-signal-dot" style="background:#64748b;"></span>
+            <span class="tf-price-text">--</span>
+          </div>
+          <div class="tf-source">--</div>
         </div>
         <div class="tf-card" id="tf-15m">
           <div class="tf-label">15分钟</div>
-          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
-          <div class="tf-detail"></div>
+          <div class="tf-ema">
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 180</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 250</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+          </div>
+          <div class="tf-price-row">
+            <span class="tf-signal-dot" style="background:#64748b;"></span>
+            <span class="tf-price-text">--</span>
+          </div>
+          <div class="tf-source">--</div>
         </div>
         <div class="tf-card" id="tf-30m">
           <div class="tf-label">30分钟</div>
-          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
-          <div class="tf-detail"></div>
+          <div class="tf-ema">
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 180</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 250</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+          </div>
+          <div class="tf-price-row">
+            <span class="tf-signal-dot" style="background:#64748b;"></span>
+            <span class="tf-price-text">--</span>
+          </div>
+          <div class="tf-source">--</div>
         </div>
         <div class="tf-card" id="tf-1h">
           <div class="tf-label">1小时</div>
-          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
-          <div class="tf-detail"></div>
+          <div class="tf-ema">
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 180</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 250</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+          </div>
+          <div class="tf-price-row">
+            <span class="tf-signal-dot" style="background:#64748b;"></span>
+            <span class="tf-price-text">--</span>
+          </div>
+          <div class="tf-source">--</div>
         </div>
         <div class="tf-card" id="tf-4h">
           <div class="tf-label">4小时</div>
-          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
-          <div class="tf-detail"></div>
-        </div>
-      </div>
-
-      <div class="ema-row">
-        <div class="ema-box" id="ema-short-box">
-          <div class="ema-label" id="ema-short-label">EMA 180</div>
-          <div class="ema-value"><span class="loading-dots">计算中...</span></div>
-        </div>
-        <div class="ema-box" id="ema-long-box">
-          <div class="ema-label" id="ema-long-label">EMA 250</div>
-          <div class="ema-value"><span class="loading-dots">计算中...</span></div>
+          <div class="tf-ema">
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 180</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+            <div class="tf-ema-row"><span class="tf-ema-label">EMA 250</span><span class="tf-ema-value loading-dots">计算中...</span></div>
+          </div>
+          <div class="tf-price-row">
+            <span class="tf-signal-dot" style="background:#64748b;"></span>
+            <span class="tf-price-text">--</span>
+          </div>
+          <div class="tf-source">--</div>
         </div>
       </div>
     </div>
@@ -251,48 +275,48 @@ function renderDashboard(d) {
     const tfCard = document.getElementById('tf-' + tfKey);
     if (!tfCard) continue;
     const s = states[tfKey];
-    const sigEl = tfCard.querySelector('.tf-signal');
-    const detEl = tfCard.querySelector('.tf-detail');
+    const emaRows = tfCard.querySelectorAll('.tf-ema-row');
+    const dotEl = tfCard.querySelector('.tf-signal-dot');
+    const priceEl = tfCard.querySelector('.tf-price-text');
+    const sourceEl = tfCard.querySelector('.tf-source');
+
     if (s) {
-      // 信号：用 CSS 圆形图标 + 文字
+      // 更新 EMA 标签（根据配置动态变化）
+      let esVal = 180, elVal = 250;
+      if (d.config && d.config.ema_alert) {
+        esVal = d.config.ema_alert.ema_short || 180;
+        elVal = d.config.ema_alert.ema_long || 250;
+      }
+
+      const labels = ['EMA ' + esVal, 'EMA ' + elVal];
+      const vals = [s.ema_short, s.ema_long];
+      emaRows.forEach((row, idx) => {
+        const labelEl = row.querySelector('.tf-ema-label');
+        const valEl = row.querySelector('.tf-ema-value');
+        if (labelEl) labelEl.textContent = labels[idx];
+        if (valEl) valEl.textContent = '$' + formatNumber(vals[idx], 2);
+      });
+
+      // 信号点颜色（价格在 EMA 区间上下方）
       const signal = s.signal || 'between';
-      let dotColor = '#facc15';     // 观望黄色
-      let text = '观望';
-      if (signal === 'long') { dotColor = '#22c55e'; text = '开多'; }
-      else if (signal === 'short') { dotColor = '#ef4444'; text = '开空'; }
-      sigEl.innerHTML = '<span class="signal-dot" style="background:' + dotColor + '"></span> ' + text;
-      sigEl.className = 'tf-signal tf-' + signal;
-      detEl.innerHTML = '<div class="tf-price">价: $' + formatNumber(s.price, 2) + '</div>' +
-                        '<div class="tf-arrangement">' + (s.arrangement || '') + '</div>' +
-                        '<div class="tf-source">' + (s.data_source || 'gateio') + '</div>';
+      let dotColor = '#facc15';      // yellow for between
+      if (signal === 'long') dotColor = '#22c55e';   // green - price above both
+      else if (signal === 'short') dotColor = '#ef4444';  // red - price below both
+      dotEl.style.background = dotColor;
+      dotEl.style.boxShadow = '0 0 10px ' + dotColor;
+
+      priceEl.textContent = '$' + formatNumber(s.price, 2);
+      sourceEl.textContent = s.data_source || 'gateio';
     } else {
-      sigEl.innerHTML = '<span class="loading-dots">加载中...</span>';
-      detEl.textContent = '';
+      emaRows.forEach(row => {
+        const valEl = row.querySelector('.tf-ema-value');
+        if (valEl) { valEl.textContent = '计算中...'; valEl.classList.add('loading-dots'); }
+      });
+      dotEl.style.background = '#64748b';
+      dotEl.style.boxShadow = 'none';
+      priceEl.textContent = '--';
+      sourceEl.textContent = '--';
     }
-  }
-
-  // EMA 数值（取 5m 周期）
-  const s5m = states['5m'];
-  const emaShortLabel = document.getElementById('ema-short-label');
-  const emaLongLabel = document.getElementById('ema-long-label');
-  const emaShortBox = document.querySelector('#ema-short-box .ema-value');
-  const emaLongBox = document.querySelector('#ema-long-box .ema-value');
-
-  // 根据配置更新 EMA 标签
-  let esVal = 180, elVal = 250;
-  if (d.config && d.config.ema_alert) {
-    esVal = d.config.ema_alert.ema_short || 180;
-    elVal = d.config.ema_alert.ema_long || 250;
-  }
-  if (emaShortLabel) emaShortLabel.textContent = 'EMA ' + esVal;
-  if (emaLongLabel) emaLongLabel.textContent = 'EMA ' + elVal;
-
-  if (s5m) {
-    if (emaShortBox) emaShortBox.textContent = '$' + formatNumber(s5m.ema_short, 2);
-    if (emaLongBox) emaLongBox.textContent = '$' + formatNumber(s5m.ema_long, 2);
-  } else {
-    if (emaShortBox) emaShortBox.innerHTML = '<span class="loading-dots">计算中...</span>';
-    if (emaLongBox) emaLongBox.innerHTML = '<span class="loading-dots">计算中...</span>';
   }
 
   // 价格区间列表

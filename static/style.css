@@ -213,71 +213,61 @@ body::before {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.55);
   letter-spacing: 1px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-.tf-signal {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  min-height: 28px;
+.tf-ema {
+  margin-bottom: 10px;
+}
+.tf-ema-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 0;
+  font-size: 11px;
 }
-.tf-signal.tf-long { color: #22c55e; }
-.tf-signal.tf-short { color: #f43f5e; }
-.tf-signal.tf-between { color: #fbbf24; }
+.tf-ema-label {
+  color: rgba(255, 255, 255, 0.55);
+}
+.tf-ema-value {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
-.signal-dot {
+.tf-price-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.tf-signal-dot {
   display: inline-block;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  box-shadow: 0 0 8px currentColor;
+  transition: background 0.3s;
 }
-
-.tf-detail {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-  line-height: 1.6;
+.tf-price-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
 }
-.tf-price { color: rgba(255, 255, 255, 0.75); }
-.tf-arrangement { color: rgba(255, 255, 255, 0.55); }
 .tf-source {
   color: rgba(139, 92, 246, 0.85);
   font-size: 10px;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 /* ============================================================
-   EMA 展示
+   EMA 展示（全局区已删除，保留样式供其他页面复用）
    ============================================================ */
 .ema-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-
-.ema-box {
-  padding: 16px;
-  text-align: center;
-  background: rgba(30, 41, 59, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-}
-.ema-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
-  letter-spacing: 1px;
-  margin-bottom: 6px;
-}
-.ema-value {
-  font-size: 22px;
-  font-weight: 600;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
