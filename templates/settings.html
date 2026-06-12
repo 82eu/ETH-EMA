@@ -1,202 +1,268 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>设置 - ETH EMA 预警</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
-  min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #e2e8f0;
-  padding: 20px;
-}
-.container { max-width: 600px; margin: 0 auto; }
-h1 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
-h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: #f1f5f9; }
-
-.card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
-}
-
-.form-group { margin-bottom: 16px; }
-label { display: block; font-size: 14px; color: #cbd5e1; margin-bottom: 8px; font-weight: 500; }
-input[type="text"], input[type="number"], input[type="email"], input[type="password"] {
-  width: 100%;
-  padding: 10px 14px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  color: #fff;
-  font-size: 14px;
-}
-input:focus { outline: none; border-color: #6366f1; }
-
-.checkbox-group {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  background: rgba(0,0,0,0.2);
-  border-radius: 10px;
-  cursor: pointer;
-  border: 2px solid transparent;
-}
-.checkbox-item input { width: 18px; height: 18px; cursor: pointer; }
-.checkbox-item.checked { border-color: #6366f1; background: rgba(99,102,241,0.15); }
-.checkbox-label { font-size: 14px; font-weight: 500; }
-
-.two-col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.btn {
-  width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 8px;
-}
-.btn:hover { opacity: 0.9; }
-.btn-secondary {
-  background: rgba(255,255,255,0.1);
-  margin-top: 10px;
-}
-
-.nav {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 24px;
-}
-.nav-btn {
-  padding: 10px 20px;
-  background: rgba(255,255,255,0.05);
-  color: #cbd5e1;
-  text-decoration: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.nav-btn.active { background: rgba(99,102,241,0.3); color: #fff; border-color: #6366f1; }
-
-.flash {
-  background: rgba(16,185,129,0.15);
-  border: 1px solid rgba(16,185,129,0.3);
-  color: #34d399;
-  padding: 12px 16px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-.hint { font-size: 12px; color: #64748b; margin-top: 6px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETH EMA 预警系统 · 系统设置</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="container">
-  <h1>⚙️ 系统设置</h1>
+    <div class="container">
 
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      {% for msg in messages %}
-        <div class="flash">{{ msg }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  <form method="POST">
-
-    <!-- 启用哪些周期发预警 -->
-    <div class="card">
-      <h2>🔔 启用预警周期（勾选的周期会发邮件）</h2>
-      <div class="checkbox-group">
-        {% for tf in timeframes %}
-        <label class="checkbox-item {% if tf in enabled_tfs %}checked{% endif %}">
-          <input type="checkbox" name="enabled_timeframes" value="{{ tf }}" {% if tf in enabled_tfs %}checked{% endif %} onchange="this.parentElement.classList.toggle('checked', this.checked)">
-          <span class="checkbox-label">{{ tf_labels[tf] }}</span>
-        </label>
-        {% endfor %}
-      </div>
-      <div class="hint">只监控勾选的周期。建议选中大周期（30分钟/1小时/4小时）更稳定。</div>
-    </div>
-
-    <!-- EMA 参数 -->
-    <div class="card">
-      <h2>📊 EMA 参数</h2>
-      <div class="two-col">
-        <div class="form-group">
-          <label>EMA 快线（默认180）</label>
-          <input type="number" name="ema_short" value="{{ cfg.ema_alert.ema_short }}" min="5" max="500">
+        <!-- 顶部导航 -->
+        <div class="header">
+            <div class="status-group">
+                <div class="status-dot" id="status-dot"></div>
+                <span class="status-text" id="status-label">加载中...</span>
+            </div>
+            <nav class="nav-tabs">
+                <a href="/" class="nav-tab">📊 仪表盘</a>
+                <a href="/settings" class="nav-tab active">⚙️ 设置</a>
+                <a href="/history" class="nav-tab">📜 历史</a>
+            </nav>
+            <span class="update-time" id="update-time">--:--:--</span>
         </div>
-        <div class="form-group">
-          <label>EMA 慢线（默认250）</label>
-          <input type="number" name="ema_long" value="{{ cfg.ema_alert.ema_long }}" min="10" max="1000">
+
+        <!-- 系统设置 -->
+        <div class="card">
+            <div class="section-title">飞书机器人</div>
+            <div class="config-row">
+                <span class="config-label">当前状态</span>
+                <span class="config-current" id="feishu-status">未配置</span>
+            </div>
+            <div class="config-row">
+                <span class="config-label">Webhook 地址</span>
+                <input type="text" id="feishu-webhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." style="flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 13px;">
+            </div>
+            <div class="config-row" style="border-bottom: none;">
+                <span class="config-label">测试推送</span>
+                <button class="btn btn-primary" onclick="testAlert()">发送测试消息</button>
+            </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>预警冷却时间（秒）</label>
-        <input type="number" name="cooldown_seconds" value="{{ cfg.alert.cooldown_seconds }}" min="60" max="7200">
-        <div class="hint">价格进入区间后，这段时间内不会重复发预警。默认 600秒（10分钟）</div>
-      </div>
+
+        <!-- EMA 参数 -->
+        <div class="card">
+            <div class="section-title">EMA 参数</div>
+            <div class="config-row">
+                <span class="config-label">EMA 短周期</span>
+                <input type="number" id="ema-short" value="180" min="5" max="1000" style="width: 120px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px;">
+            </div>
+            <div class="config-row" style="border-bottom: none;">
+                <span class="config-label">EMA 长周期</span>
+                <input type="number" id="ema-long" value="250" min="10" max="2000" style="width: 120px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px;">
+            </div>
+        </div>
+
+        <!-- 推送设置 -->
+        <div class="card">
+            <div class="section-title">推送设置</div>
+            <div class="config-row">
+                <span class="config-label">推送间隔</span>
+                <span class="config-current" id="current-interval">每4小时</span>
+            </div>
+            <div class="config-row">
+                <span class="config-label">修改间隔</span>
+                <select id="interval-select" style="flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px; cursor: pointer;">
+                    <option value="30">30秒</option>
+                    <option value="60">1分钟</option>
+                    <option value="300">5分钟</option>
+                    <option value="600">10分钟</option>
+                    <option value="1800">30分钟</option>
+                    <option value="3600">1小时</option>
+                    <option value="7200">2小时</option>
+                    <option value="14400">4小时</option>
+                    <option value="28800">8小时</option>
+                    <option value="43200">12小时</option>
+                </select>
+            </div>
+            <div class="config-row" style="border-bottom: none;">
+                <span class="config-label">预警冷却</span>
+                <input type="number" id="cooldown-seconds" value="600" min="60" max="86400" style="width: 120px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px;">
+                <span style="color: rgba(255,255,255,0.5); font-size: 13px;">秒</span>
+            </div>
+        </div>
+
+        <!-- 周期预警开关 -->
+        <div class="card">
+            <div class="section-title">启用预警周期</div>
+            <div class="config-row" style="flex-wrap: wrap; gap: 14px; border-bottom: none;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="tf-5m-enabled" class="tf-switch" data-tf="5m">
+                    <span>5分钟</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="tf-15m-enabled" class="tf-switch" data-tf="15m">
+                    <span>15分钟</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="tf-30m-enabled" class="tf-switch" data-tf="30m">
+                    <span>30分钟</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="tf-1h-enabled" class="tf-switch" data-tf="1h">
+                    <span>1小时</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="tf-4h-enabled" class="tf-switch" data-tf="4h">
+                    <span>4小时</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 保存按钮 -->
+        <div class="card">
+            <div class="section-title">保存设置</div>
+            <div class="config-row" style="border-bottom: none;">
+                <span class="config-label">操作</span>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="saveAllConfig()">💾 保存全部设置</button>
+                    <button class="btn" onclick="refreshData()">🔄 刷新数据</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- 邮箱配置 -->
-    <div class="card">
-      <h2>📬 邮件通知配置</h2>
-      <div class="form-group">
-        <label>SMTP服务器</label>
-        <input type="text" name="smtp_server" value="{{ cfg.email.smtp_server }}" placeholder="smtp.qq.com">
-      </div>
-      <div class="form-group">
-        <label>端口</label>
-        <input type="number" name="smtp_port" value="{{ cfg.email.smtp_port }}" placeholder="465">
-      </div>
-      <div class="form-group">
-        <label>发件邮箱</label>
-        <input type="email" name="from_email" value="{{ cfg.email.from_email }}" placeholder="your@email.com">
-      </div>
-      <div class="form-group">
-        <label>授权码/密码</label>
-        <input type="password" name="password" value="{{ cfg.email.password }}" placeholder="邮箱授权码">
-      </div>
-      <div class="form-group">
-        <label>收件邮箱</label>
-        <input type="email" name="to_email" value="{{ cfg.email.to_email }}" placeholder="your@email.com">
-      </div>
-    </div>
+    <script>
+        // ========== 填充配置 ==========
+        function populateConfigFields(cfg) {
+            if (!cfg) return;
 
-    <button type="submit" class="btn">💾 保存设置</button>
-  </form>
+            var feishuCfg = cfg.feishu || {};
+            var webhook = feishuCfg.webhook || '';
+            var webhookInput = document.getElementById('feishu-webhook');
+            if (webhookInput) webhookInput.value = webhook;
 
-  <!-- 测试邮件按钮 -->
-  <form method="POST" action="{{ url_for('test_email') }}">
-    <button type="submit" class="btn btn-secondary">📧 发送测试邮件</button>
-  </form>
+            var fsStatus = document.getElementById('feishu-status');
+            if (fsStatus) fsStatus.textContent = webhook ? '✅ 已配置' : '⚠️ 未配置';
 
-  <div class="nav">
-    <a href="{{ url_for('dashboard') }}" class="nav-btn">📊 仪表盘</a>
-    <a href="{{ url_for('settings') }}" class="nav-btn active">⚙️ 设置</a>
-    <a href="{{ url_for('history_page') }}" class="nav-btn">📝 历史</a>
-  </div>
-</div>
+            var emaCfg = cfg.ema_alert || {};
+            var es = document.getElementById('ema-short');
+            var el = document.getElementById('ema-long');
+            if (es) es.value = emaCfg.ema_short || 180;
+            if (el) el.value = emaCfg.ema_long || 250;
+
+            var interval = feishuCfg.price_push_interval_seconds || 14400;
+            var intervalSelect = document.getElementById('interval-select');
+            if (intervalSelect) intervalSelect.value = interval;
+            var curInterval = document.getElementById('current-interval');
+            if (curInterval) {
+                var displayText = '';
+                for (var i = 0; i < intervalSelect.options.length; i++) {
+                    if (intervalSelect.options[i].value == interval) {
+                        displayText = intervalSelect.options[i].text;
+                        break;
+                    }
+                }
+                curInterval.textContent = '每' + (displayText || '4小时');
+            }
+
+            var alertCfg = cfg.alert || {};
+            var cooldown = document.getElementById('cooldown-seconds');
+            if (cooldown) cooldown.value = alertCfg.cooldown_seconds || 600;
+
+            var enabledTfs = emaCfg.enabled_timeframes || [];
+            ['5m', '15m', '30m', '1h', '4h'].forEach(function(tf) {
+                var cb = document.getElementById('tf-' + tf + '-enabled');
+                if (cb) cb.checked = enabledTfs.indexOf(tf) >= 0;
+            });
+        }
+
+        // ========== 保存全部设置 ==========
+        function saveAllConfig() {
+            var webhook = document.getElementById('feishu-webhook').value.trim();
+            var emaShort = parseInt(document.getElementById('ema-short').value) || 180;
+            var emaLong = parseInt(document.getElementById('ema-long').value) || 250;
+            var interval = parseInt(document.getElementById('interval-select').value) || 14400;
+            var cooldown = parseInt(document.getElementById('cooldown-seconds').value) || 600;
+
+            if (emaShort >= emaLong) {
+                alert('EMA 短周期必须小于长周期');
+                return;
+            }
+
+            var enabledTfs = [];
+            document.querySelectorAll('.tf-switch').forEach(function(cb) {
+                if (cb.checked) enabledTfs.push(cb.dataset.tf);
+            });
+
+            var payload = {
+                feishu_webhook: webhook,
+                ema_short: emaShort,
+                ema_long: emaLong,
+                push_interval: interval,
+                cooldown_seconds: cooldown,
+                enabled_timeframes: enabledTfs
+            };
+
+            fetch('/api/save_config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    alert('✅ 设置保存成功！已生效');
+                    loadConfig();
+                } else {
+                    alert('保存失败: ' + (res.error || '未知错误'));
+                }
+            })
+            .catch(err => alert('请求失败: ' + err));
+        }
+
+        // ========== 加载配置 ==========
+        function loadConfig() {
+            fetch('/api/state')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status) {
+                    var dot = document.getElementById('status-dot');
+                    var label = document.getElementById('status-label');
+                    if (data.status.level === 'online') {
+                        dot.className = 'status-dot online';
+                        label.textContent = '已连接';
+                    } else {
+                        dot.className = 'status-dot offline';
+                        label.textContent = '离线';
+                    }
+                }
+                if (data.update_time_str) {
+                    document.getElementById('update-time').textContent =
+                        data.update_time_str.split(' ')[1] || data.update_time_str;
+                }
+                if (data.config) populateConfigFields(data.config);
+            })
+            .catch(err => console.error('加载配置失败:', err));
+        }
+
+        // ========== 刷新数据 ==========
+        function refreshData() {
+            fetch('/api/refresh_data')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) alert('数据刷新完成');
+                else alert('刷新失败: ' + (res.error || '未知错误'));
+            })
+            .catch(err => alert('请求失败: ' + err));
+        }
+
+        // ========== 测试推送 ==========
+        function testAlert() {
+            fetch('/api/test_alert', { method: 'POST' })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) alert('✅ 测试预警已发送到飞书');
+                else alert('发送失败：' + (res.error || '未知错误'));
+            })
+            .catch(err => alert('请求失败: ' + err));
+        }
+
+        // ========== 初始化 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+        });
+    </script>
 </body>
 </html>
