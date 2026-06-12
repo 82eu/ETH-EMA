@@ -1,268 +1,192 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETH EMA 预警系统 · 系统设置</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - ETH EMA 预警</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
+  <div class="container">
+    <nav class="nav">
+      <span class="nav-logo">📊 ETH EMA 预警</span>
+      <div class="nav-links">
+        <a href="/" class="nav-link">仪表盘</a>
+        <a href="/settings" class="nav-link active">设置</a>
+        <a href="/history" class="nav-link">历史</a>
+      </div>
+      <span class="nav-status" id="mini-status"></span>
+    </nav>
 
-        <!-- 顶部导航 -->
-        <div class="header">
-            <div class="status-group">
-                <div class="status-dot" id="status-dot"></div>
-                <span class="status-text" id="status-label">加载中...</span>
-            </div>
-            <nav class="nav-tabs">
-                <a href="/" class="nav-tab">📊 仪表盘</a>
-                <a href="/settings" class="nav-tab active">⚙️ 设置</a>
-                <a href="/history" class="nav-tab">📜 历史</a>
-            </nav>
-            <span class="update-time" id="update-time">--:--:--</span>
-        </div>
-
-        <!-- 系统设置 -->
-        <div class="card">
-            <div class="section-title">飞书机器人</div>
-            <div class="config-row">
-                <span class="config-label">当前状态</span>
-                <span class="config-current" id="feishu-status">未配置</span>
-            </div>
-            <div class="config-row">
-                <span class="config-label">Webhook 地址</span>
-                <input type="text" id="feishu-webhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." style="flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 13px;">
-            </div>
-            <div class="config-row" style="border-bottom: none;">
-                <span class="config-label">测试推送</span>
-                <button class="btn btn-primary" onclick="testAlert()">发送测试消息</button>
-            </div>
-        </div>
-
-        <!-- EMA 参数 -->
-        <div class="card">
-            <div class="section-title">EMA 参数</div>
-            <div class="config-row">
-                <span class="config-label">EMA 短周期</span>
-                <input type="number" id="ema-short" value="180" min="5" max="1000" style="width: 120px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px;">
-            </div>
-            <div class="config-row" style="border-bottom: none;">
-                <span class="config-label">EMA 长周期</span>
-                <input type="number" id="ema-long" value="250" min="10" max="2000" style="width: 120px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px;">
-            </div>
-        </div>
-
-        <!-- 推送设置 -->
-        <div class="card">
-            <div class="section-title">推送设置</div>
-            <div class="config-row">
-                <span class="config-label">推送间隔</span>
-                <span class="config-current" id="current-interval">每4小时</span>
-            </div>
-            <div class="config-row">
-                <span class="config-label">修改间隔</span>
-                <select id="interval-select" style="flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px; cursor: pointer;">
-                    <option value="30">30秒</option>
-                    <option value="60">1分钟</option>
-                    <option value="300">5分钟</option>
-                    <option value="600">10分钟</option>
-                    <option value="1800">30分钟</option>
-                    <option value="3600">1小时</option>
-                    <option value="7200">2小时</option>
-                    <option value="14400">4小时</option>
-                    <option value="28800">8小时</option>
-                    <option value="43200">12小时</option>
-                </select>
-            </div>
-            <div class="config-row" style="border-bottom: none;">
-                <span class="config-label">预警冷却</span>
-                <input type="number" id="cooldown-seconds" value="600" min="60" max="86400" style="width: 120px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px;">
-                <span style="color: rgba(255,255,255,0.5); font-size: 13px;">秒</span>
-            </div>
-        </div>
-
-        <!-- 周期预警开关 -->
-        <div class="card">
-            <div class="section-title">启用预警周期</div>
-            <div class="config-row" style="flex-wrap: wrap; gap: 14px; border-bottom: none;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="tf-5m-enabled" class="tf-switch" data-tf="5m">
-                    <span>5分钟</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="tf-15m-enabled" class="tf-switch" data-tf="15m">
-                    <span>15分钟</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="tf-30m-enabled" class="tf-switch" data-tf="30m">
-                    <span>30分钟</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="tf-1h-enabled" class="tf-switch" data-tf="1h">
-                    <span>1小时</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="tf-4h-enabled" class="tf-switch" data-tf="4h">
-                    <span>4小时</span>
-                </label>
-            </div>
-        </div>
-
-        <!-- 保存按钮 -->
-        <div class="card">
-            <div class="section-title">保存设置</div>
-            <div class="config-row" style="border-bottom: none;">
-                <span class="config-label">操作</span>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-primary" onclick="saveAllConfig()">💾 保存全部设置</button>
-                    <button class="btn" onclick="refreshData()">🔄 刷新数据</button>
-                </div>
-            </div>
-        </div>
-
+    <!-- 飞书 & 简单推送 -->
+    <div class="card">
+      <div class="section-title">飞书推送 / 简单间隔推送</div>
+      <div class="form-row">
+        <label>飞书 Webhook URL</label>
+        <input type="text" id="feishu-webhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/...">
+      </div>
+      <div class="form-row">
+        <label>简单间隔推送</label>
+        <select id="interval-select">
+          <option value="30">每 30 秒（用于测试数据是否刷新）</option>
+          <option value="0">关闭</option>
+        </select>
+      </div>
+      <div class="form-row" style="justify-content: space-between;">
+        <button class="btn-secondary" id="btn-test-feishu" onclick="testFeishu()">发送测试消息到飞书</button>
+        <span id="test-result" class="hint"></span>
+      </div>
     </div>
 
-    <script>
-        // ========== 填充配置 ==========
-        function populateConfigFields(cfg) {
-            if (!cfg) return;
+    <!-- EMA 参数 -->
+    <div class="card">
+      <div class="section-title">EMA 参数</div>
+      <div class="form-row">
+        <label>EMA 短周期</label>
+        <input type="number" id="ema-short" value="180" min="2" max="500">
+      </div>
+      <div class="form-row">
+        <label>EMA 长周期</label>
+        <input type="number" id="ema-long" value="250" min="5" max="500">
+      </div>
+      <div class="form-row">
+        <label>预警冷却时间</label>
+        <input type="number" id="cooldown-seconds" value="600" min="60" max="86400">
+        <span class="hint">秒（同一周期内触发后多久内不再重复）</span>
+      </div>
+    </div>
 
-            var feishuCfg = cfg.feishu || {};
-            var webhook = feishuCfg.webhook || '';
-            var webhookInput = document.getElementById('feishu-webhook');
-            if (webhookInput) webhookInput.value = webhook;
+    <!-- 固定时间点推送 -->
+    <div class="card">
+      <div class="section-title">固定时间点价格播报</div>
+      <div class="hint" style="margin-bottom:12px;">从北京时间 8:00 起对齐时间点，按间隔准时推送当前价格到飞书。</div>
+      <div class="form-row">
+        <label>推送间隔</label>
+        <select id="fixed-interval-select">
+          <option value="0">关闭</option>
+          <option value="900">每 15 分钟</option>
+          <option value="3600">每 1 小时</option>
+          <option value="7200">每 2 小时</option>
+          <option value="14400">每 4 小时</option>
+          <option value="28800">每 8 小时</option>
+          <option value="43200">每 12 小时</option>
+        </select>
+      </div>
+      <div class="hint" id="fixed-info"></div>
+    </div>
 
-            var fsStatus = document.getElementById('feishu-status');
-            if (fsStatus) fsStatus.textContent = webhook ? '✅ 已配置' : '⚠️ 未配置';
+    <!-- 启用周期 -->
+    <div class="card">
+      <div class="section-title">启用预警的周期</div>
+      <div class="form-row" style="flex-wrap: wrap; gap: 18px;">
+        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" class="tf-switch" data-tf="5m" checked> 5 分钟</label>
+        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" class="tf-switch" data-tf="15m" checked> 15 分钟</label>
+        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" class="tf-switch" data-tf="30m" checked> 30 分钟</label>
+        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" class="tf-switch" data-tf="1h" checked> 1 小时</label>
+        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" class="tf-switch" data-tf="4h" checked> 4 小时</label>
+      </div>
+    </div>
 
-            var emaCfg = cfg.ema_alert || {};
-            var es = document.getElementById('ema-short');
-            var el = document.getElementById('ema-long');
-            if (es) es.value = emaCfg.ema_short || 180;
-            if (el) el.value = emaCfg.ema_long || 250;
+    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+      <button class="btn-primary" onclick="saveAllConfig()">保存全部设置</button>
+    </div>
+    <div id="save-result" class="hint" style="text-align:right;"></div>
 
-            var interval = feishuCfg.price_push_interval_seconds || 14400;
-            var intervalSelect = document.getElementById('interval-select');
-            if (intervalSelect) intervalSelect.value = interval;
-            var curInterval = document.getElementById('current-interval');
-            if (curInterval) {
-                var displayText = '';
-                for (var i = 0; i < intervalSelect.options.length; i++) {
-                    if (intervalSelect.options[i].value == interval) {
-                        displayText = intervalSelect.options[i].text;
-                        break;
-                    }
-                }
-                curInterval.textContent = '每' + (displayText || '4小时');
-            }
+    <div class="footer">
+      <span>配置会保存到服务器本地 config.yaml</span>
+    </div>
+  </div>
 
-            var alertCfg = cfg.alert || {};
-            var cooldown = document.getElementById('cooldown-seconds');
-            if (cooldown) cooldown.value = alertCfg.cooldown_seconds || 600;
+<script>
+function _load() {
+  fetch('/api/state', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(d => {
+      if (!d || !d.config) return;
+      const cfg = d.config;
+      document.getElementById('feishu-webhook').value = cfg.feishu ? (cfg.feishu.webhook || '') : '';
 
-            var enabledTfs = emaCfg.enabled_timeframes || [];
-            ['5m', '15m', '30m', '1h', '4h'].forEach(function(tf) {
-                var cb = document.getElementById('tf-' + tf + '-enabled');
-                if (cb) cb.checked = enabledTfs.indexOf(tf) >= 0;
-            });
-        }
+      const si = document.getElementById('interval-select');
+      si.value = (cfg.feishu && cfg.feishu.price_push_interval_seconds != null) ? cfg.feishu.price_push_interval_seconds : 30;
 
-        // ========== 保存全部设置 ==========
-        function saveAllConfig() {
-            var webhook = document.getElementById('feishu-webhook').value.trim();
-            var emaShort = parseInt(document.getElementById('ema-short').value) || 180;
-            var emaLong = parseInt(document.getElementById('ema-long').value) || 250;
-            var interval = parseInt(document.getElementById('interval-select').value) || 14400;
-            var cooldown = parseInt(document.getElementById('cooldown-seconds').value) || 600;
+      const es = cfg.ema_alert ? (cfg.ema_alert.ema_short || 180) : 180;
+      const el = cfg.ema_alert ? (cfg.ema_alert.ema_long || 250) : 250;
+      document.getElementById('ema-short').value = es;
+      document.getElementById('ema-long').value = el;
 
-            if (emaShort >= emaLong) {
-                alert('EMA 短周期必须小于长周期');
-                return;
-            }
+      const cd = cfg.alert ? (cfg.alert.cooldown_seconds || 600) : 600;
+      document.getElementById('cooldown-seconds').value = cd;
 
-            var enabledTfs = [];
-            document.querySelectorAll('.tf-switch').forEach(function(cb) {
-                if (cb.checked) enabledTfs.push(cb.dataset.tf);
-            });
+      const fixed = (cfg.feishu && cfg.feishu.fixed_push_interval_seconds != null) ? cfg.feishu.fixed_push_interval_seconds : 0;
+      document.getElementById('fixed-interval-select').value = fixed;
+      updateFixedInfo(fixed);
 
-            var payload = {
-                feishu_webhook: webhook,
-                ema_short: emaShort,
-                ema_long: emaLong,
-                push_interval: interval,
-                cooldown_seconds: cooldown,
-                enabled_timeframes: enabledTfs
-            };
+      const enabled = (cfg.ema_alert && cfg.ema_alert.enabled_timeframes) || ['5m','15m','30m','1h','4h'];
+      document.querySelectorAll('.tf-switch').forEach(cb => {
+        cb.checked = enabled.includes(cb.dataset.tf);
+      });
+    }).catch(e => {
+      console.error('加载配置失败', e);
+    });
+}
 
-            fetch('/api/save_config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    alert('✅ 设置保存成功！已生效');
-                    loadConfig();
-                } else {
-                    alert('保存失败: ' + (res.error || '未知错误'));
-                }
-            })
-            .catch(err => alert('请求失败: ' + err));
-        }
+function updateFixedInfo(fixedSeconds) {
+  const el = document.getElementById('fixed-info');
+  if (!fixedSeconds) {
+    el.textContent = '当前：未启用。选择一个间隔后，将从北京时间 8:00 起按间隔对齐推送。';
+    return;
+  }
+  let m = fixedSeconds / 60;
+  let unit = '分钟';
+  if (m >= 60) { m = m / 60; unit = '小时'; }
+  el.textContent = '当前：每 ' + m + ' ' + unit + '，下次推送时间会在仪表盘信息栏显示。';
+}
 
-        // ========== 加载配置 ==========
-        function loadConfig() {
-            fetch('/api/state')
-            .then(r => r.json())
-            .then(data => {
-                if (data.status) {
-                    var dot = document.getElementById('status-dot');
-                    var label = document.getElementById('status-label');
-                    if (data.status.level === 'online') {
-                        dot.className = 'status-dot online';
-                        label.textContent = '已连接';
-                    } else {
-                        dot.className = 'status-dot offline';
-                        label.textContent = '离线';
-                    }
-                }
-                if (data.update_time_str) {
-                    document.getElementById('update-time').textContent =
-                        data.update_time_str.split(' ')[1] || data.update_time_str;
-                }
-                if (data.config) populateConfigFields(data.config);
-            })
-            .catch(err => console.error('加载配置失败:', err));
-        }
+document.addEventListener('DOMContentLoaded', () => {
+  _load();
+  document.getElementById('fixed-interval-select').addEventListener('change', e => updateFixedInfo(parseInt(e.target.value) || 0));
+});
 
-        // ========== 刷新数据 ==========
-        function refreshData() {
-            fetch('/api/refresh_data')
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) alert('数据刷新完成');
-                else alert('刷新失败: ' + (res.error || '未知错误'));
-            })
-            .catch(err => alert('请求失败: ' + err));
-        }
+function testFeishu() {
+  const res = document.getElementById('test-result');
+  res.textContent = '发送中...';
+  res.style.color = '#fbbf24';
+  fetch('/api/test_alert').then(r => r.json()).then(d => {
+    if (d.success) { res.textContent = '✅ ' + d.message; res.style.color = '#4ade80'; }
+    else { res.textContent = '❌ ' + (d.message || d.error || '失败'); res.style.color = '#f87171'; }
+  }).catch(e => { res.textContent = '请求异常'; res.style.color = '#f87171'; });
+}
 
-        // ========== 测试推送 ==========
-        function testAlert() {
-            fetch('/api/test_alert', { method: 'POST' })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) alert('✅ 测试预警已发送到飞书');
-                else alert('发送失败：' + (res.error || '未知错误'));
-            })
-            .catch(err => alert('请求失败: ' + err));
-        }
+function saveAllConfig() {
+  const webhook = document.getElementById('feishu-webhook').value.trim();
+  const emaShort = parseInt(document.getElementById('ema-short').value) || 180;
+  const emaLong = parseInt(document.getElementById('ema-long').value) || 250;
+  if (emaShort >= emaLong) { alert('EMA 短周期必须小于长周期'); return; }
+  const interval = parseInt(document.getElementById('interval-select').value) || 0;
+  const fixedInterval = parseInt(document.getElementById('fixed-interval-select').value) || 0;
+  const cooldown = parseInt(document.getElementById('cooldown-seconds').value) || 600;
+  const enabled = [];
+  document.querySelectorAll('.tf-switch').forEach(cb => { if (cb.checked) enabled.push(cb.dataset.tf); });
 
-        // ========== 初始化 ==========
-        document.addEventListener('DOMContentLoaded', function() {
-            loadConfig();
-        });
-    </script>
+  const saveEl = document.getElementById('save-result');
+  saveEl.textContent = '保存中...'; saveEl.style.color = '#fbbf24';
+  fetch('/api/save_config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      feishu_webhook: webhook,
+      ema_short: emaShort,
+      ema_long: emaLong,
+      push_interval: interval,
+      fixed_push_interval: fixedInterval,
+      cooldown_seconds: cooldown,
+      enabled_timeframes: enabled
+    })
+  }).then(r => r.json()).then(d => {
+    if (d.success) { saveEl.textContent = '✅ ' + d.message; saveEl.style.color = '#4ade80'; }
+    else { saveEl.textContent = '❌ ' + (d.error || '保存失败'); saveEl.style.color = '#f87171'; }
+  }).catch(e => { saveEl.textContent = '❌ 请求异常: ' + e; saveEl.style.color = '#f87171'; });
+}
+</script>
 </body>
 </html>

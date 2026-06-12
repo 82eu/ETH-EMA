@@ -1,504 +1,388 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETH EMA 预警系统 · 仪表盘</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETH EMA 预警仪表盘</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
+  <div class="container">
+    <!-- 顶部导航 -->
+    <nav class="nav">
+      <span class="nav-logo">📊 ETH EMA 预警</span>
+      <div class="nav-links">
+        <a href="/" class="nav-link active">仪表盘</a>
+        <a href="/settings" class="nav-link">设置</a>
+        <a href="/history" class="nav-link">历史</a>
+      </div>
+      <span class="nav-status" id="conn-status-mini">正在连接...</span>
+    </nav>
 
-        <!-- 顶部导航 -->
-        <div class="header">
-            <div class="status-group">
-                <div class="status-dot" id="status-dot"></div>
-                <span class="status-text" id="status-label">正在连接...</span>
-            </div>
-            <nav class="nav-tabs">
-                <a href="/" class="nav-tab active">📊 仪表盘</a>
-                <a href="/settings" class="nav-tab">⚙️ 设置</a>
-                <a href="/history" class="nav-tab">📜 历史</a>
-            </nav>
-            <span class="update-time" id="update-time">--:--:--</span>
-        </div>
-
-        <!-- 价格卡片 -->
-        <div class="price-card">
-            <div class="price-label">ETH / USDT 实时价格</div>
-            <div class="price-value" id="current-price"><span class="loading-dots">正在获取数据</span></div>
-            <div class="price-info" id="price-info">等待数据更新...</div>
-        </div>
-
-        <!-- 信息栏 -->
-        <div class="info-bar">
-            <span>状态: <span id="conn-status">正在连接...</span></span>
-            <span>下次刷新: <span class="refresh-countdown" id="refresh-countdown">30</span>秒</span>
-            <span class="source-detail" onclick="loadState()">🔄 点此立即刷新</span>
-        </div>
-
-        <!-- 各周期状态 -->
-        <div class="card">
-            <div class="section-title">各周期状态</div>
-            <div class="tf-tabs" id="tf-tabs">
-                <div class="tf-tab" data-tf="5m">
-                    <div class="tf-label">5分钟</div>
-                    <div class="signal" id="tf-5m-signal"><span class="loading-dots">加载中</span></div>
-                </div>
-                <div class="tf-tab" data-tf="15m">
-                    <div class="tf-label">15分钟</div>
-                    <div class="signal" id="tf-15m-signal"><span class="loading-dots">加载中</span></div>
-                </div>
-                <div class="tf-tab" data-tf="30m">
-                    <div class="tf-label">30分钟</div>
-                    <div class="signal" id="tf-30m-signal"><span class="loading-dots">加载中</span></div>
-                </div>
-                <div class="tf-tab" data-tf="1h">
-                    <div class="tf-label">1小时</div>
-                    <div class="signal" id="tf-1h-signal"><span class="loading-dots">加载中</span></div>
-                </div>
-                <div class="tf-tab" data-tf="4h">
-                    <div class="tf-label">4小时</div>
-                    <div class="signal" id="tf-4h-signal"><span class="loading-dots">加载中</span></div>
-                </div>
-            </div>
-
-            <div class="ema-card">
-                <div class="ema-item">
-                    <div class="ema-label">EMA 180</div>
-                    <div class="ema-value short" id="ema-short"><span class="loading-dots">计算中</span></div>
-                </div>
-                <div class="ema-item">
-                    <div class="ema-label">EMA 250</div>
-                    <div class="ema-value long" id="ema-long"><span class="loading-dots">计算中</span></div>
-                </div>
-            </div>
-
-            <div class="detail-row">
-                <span class="detail-label">均线排列</span>
-                <span class="detail-value" id="arrangement">--</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">价格状态</span>
-                <span class="detail-value" id="position">--</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">更新时间</span>
-                <span class="detail-value" id="tf-update-time">--</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">数据源</span>
-                <span class="detail-value" id="data-source">--</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">预警信号</span>
-                <span class="detail-value" id="alert-status">--</span>
-            </div>
-        </div>
-
-        <!-- 价格区间预警 -->
-        <div class="card">
-            <div class="section-title">价格区间预警</div>
-            <div class="config-row" style="border-bottom: none; margin-bottom: 12px;">
-                <span class="config-label">设置价格触发区间</span>
-                <button class="btn btn-primary" onclick="showAddRangeModal()">+ 添加区间</button>
-            </div>
-            <div id="price-ranges-list">
-                <div class="loading-text">点击上方按钮添加价格区间</div>
-            </div>
-        </div>
-
-        <!-- 快速操作 -->
-        <div class="card">
-            <div class="section-title">快速操作</div>
-            <div class="config-row" style="border-bottom: none;">
-                <span class="config-label">测试推送</span>
-                <button class="btn btn-primary" onclick="testAlert()">发送测试预警</button>
-            </div>
-            <div class="config-row" style="border-bottom: none;">
-                <span class="config-label">立即刷新</span>
-                <button class="btn" onclick="refreshData()">刷新数据</button>
-            </div>
-        </div>
-
+    <!-- 价格区 -->
+    <div class="card price-card">
+      <div class="price-label">ETH / USDT 实时价格</div>
+      <div class="price-value" id="current-price">
+        <span class="loading-dots">正在获取数据...</span>
+      </div>
+      <div class="price-sub" id="price-sub">
+        <span>等待数据更新...</span>
+      </div>
     </div>
 
-    <!-- 添加价格区间模态框 -->
-    <div class="modal-overlay" id="add-range-modal">
-        <div class="modal">
-            <h3>添加价格区间</h3>
-            <input type="text" id="range-name" placeholder="区间名称（可选）">
-            <input type="number" id="range-low" placeholder="下限价格，如 1600">
-            <input type="number" id="range-high" placeholder="上限价格，如 1700">
-            <div class="modal-buttons">
-                <button class="btn" onclick="closeAddRangeModal()">取消</button>
-                <button class="btn btn-primary" onclick="addPriceRange()">添加</button>
-            </div>
-        </div>
+    <!-- 信息栏 -->
+    <div class="info-bar">
+      <span>状态: <span id="conn-status">正在连接...</span></span>
+      <span>下次刷新: <span class="refresh-countdown" id="refresh-countdown">30</span> 秒</span>
+      <span id="fixed-push-info"></span>
+      <span class="source-detail" onclick="loadState()">🔄 立即刷新</span>
     </div>
 
-    <script>
-        // ========== 全局状态 ==========
-        var _selectedTF = '15m';
-        var _countdown = 30;
-        var _lastPrice = 0;
-        var _lastPriceFlashTimer = null;
-        var _autoReloadTimer = null;
-        var _hasLoadedOnce = false;
+    <!-- 各周期状态 -->
+    <div class="card">
+      <div class="section-title">各周期状态</div>
+      <div class="tf-grid">
+        <div class="tf-card" id="tf-5m">
+          <div class="tf-label">5分钟</div>
+          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
+          <div class="tf-detail"></div>
+        </div>
+        <div class="tf-card" id="tf-15m">
+          <div class="tf-label">15分钟</div>
+          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
+          <div class="tf-detail"></div>
+        </div>
+        <div class="tf-card" id="tf-30m">
+          <div class="tf-label">30分钟</div>
+          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
+          <div class="tf-detail"></div>
+        </div>
+        <div class="tf-card" id="tf-1h">
+          <div class="tf-label">1小时</div>
+          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
+          <div class="tf-detail"></div>
+        </div>
+        <div class="tf-card" id="tf-4h">
+          <div class="tf-label">4小时</div>
+          <div class="tf-signal"><span class="loading-dots">加载中...</span></div>
+          <div class="tf-detail"></div>
+        </div>
+      </div>
 
-        // ========== 倒计时 ==========
-        function updateCountdown() {
-            var el = document.getElementById('refresh-countdown');
-            if (el) el.textContent = _countdown;
+      <div class="ema-row">
+        <div class="ema-box" id="ema-short-box">
+          <div class="ema-label" id="ema-short-label">EMA 180</div>
+          <div class="ema-value"><span class="loading-dots">计算中...</span></div>
+        </div>
+        <div class="ema-box" id="ema-long-box">
+          <div class="ema-label" id="ema-long-label">EMA 250</div>
+          <div class="ema-value"><span class="loading-dots">计算中...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 价格区间管理 -->
+    <div class="card">
+      <div class="section-title">
+        <span>价格区间预警</span>
+        <button class="btn-primary" id="btn-add-range" onclick="showAddRange()">+ 添加区间</button>
+      </div>
+      <div id="range-list" class="range-list">
+        <div class="range-empty">暂无价格区间，点击右上角「+ 添加区间」</div>
+      </div>
+    </div>
+
+    <!-- 添加区间弹窗 -->
+    <div class="modal" id="modal-range" style="display:none;">
+      <div class="modal-content">
+        <div class="section-title">添加价格区间</div>
+        <div class="form-row">
+          <label>名称（可选）</label>
+          <input type="text" id="range-name" placeholder="如 震荡区间">
+        </div>
+        <div class="form-row">
+          <label>下限 (USDT)</label>
+          <input type="number" id="range-low" placeholder="如 1600" step="0.01">
+        </div>
+        <div class="form-row">
+          <label>上限 (USDT)</label>
+          <input type="number" id="range-high" placeholder="如 1700" step="0.01">
+        </div>
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="range-enabled" checked> 立即启用
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="hideAddRange()">取消</button>
+          <button class="btn-primary" onclick="submitAddRange()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>数据来源: Gate.io / OKX</span>
+      <span id="last-update-text">等待数据更新...</span>
+    </div>
+  </div>
+
+<script>
+let _countdown = 30;
+let _prevPrice = null;
+let _tickTimer = null;
+
+function formatNumber(n, d) {
+  if (n == null || isNaN(n)) return '--';
+  return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+function updateCountdown() {
+  const el = document.getElementById('refresh-countdown');
+  if (el) el.textContent = _countdown;
+}
+
+// ====== 核心：请求状态 ======
+function loadState() {
+  _countdown = 30;
+  updateCountdown();
+  fetch('/api/state', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        showError(data.error);
+        return;
+      }
+      renderDashboard(data);
+    })
+    .catch(err => {
+      const el = document.getElementById('conn-status');
+      if (el) {
+        el.textContent = '网络异常，重试中...';
+        el.style.color = '#f87171';
+      }
+      // 出错后缩短下次刷新时间
+      _countdown = 8;
+      updateCountdown();
+    });
+}
+
+function showError(msg) {
+  const el = document.getElementById('conn-status');
+  if (el) {
+    el.textContent = msg || '接口异常';
+    el.style.color = '#f87171';
+  }
+}
+
+// ====== 渲染 ======
+function renderDashboard(d) {
+  const states = d.states || {};
+  const hasData = d.has_data;
+
+  // 连接状态
+  const connEl = document.getElementById('conn-status');
+  if (connEl) {
+    connEl.textContent = d.status || '未知';
+    connEl.style.color = (d.status === '已连接') ? '#4ade80' : (d.status === '连接稍慢' ? '#fbbf24' : '#f87171');
+  }
+  const miniEl = document.getElementById('conn-status-mini');
+  if (miniEl) {
+    miniEl.textContent = '● ' + (d.status || '未知');
+    miniEl.style.color = (d.status === '已连接') ? '#4ade80' : (d.status === '连接稍慢' ? '#fbbf24' : '#f87171');
+  }
+
+  // 价格
+  const priceEl = document.getElementById('current-price');
+  const priceSubEl = document.getElementById('price-sub');
+  if (hasData && d.latest_price) {
+    priceEl.innerHTML = '<span>$' + formatNumber(d.latest_price, 2) + '</span>';
+    // 涨跌高亮
+    if (_prevPrice !== null) {
+      const diff = d.latest_price - _prevPrice;
+      if (Math.abs(diff) > 0.01) {
+        const inner = priceEl.querySelector('span');
+        if (inner) {
+          inner.classList.add(diff > 0 ? 'price-up' : 'price-down');
+          setTimeout(() => inner.classList.remove('price-up', 'price-down'), 1800);
         }
+      }
+    }
+    _prevPrice = d.latest_price;
 
-        // ========== 刷新数据 ==========
-        function refreshData() {
-            fetch('/api/refresh_data')
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    loadState();
-                    alert('数据刷新完成');
-                } else {
-                    alert('刷新失败: ' + (res.error || '未知错误'));
-                }
-            }).catch(err => alert('请求失败: ' + err));
-        }
+    let sub = '';
+    if (d.data_age_sec != null && d.data_age_sec < 999999) {
+      sub = '<span>数据更新于 ' + d.data_age_sec + ' 秒前</span>';
+    } else if (d.update_time_str) {
+      sub = '<span>更新时间: ' + d.update_time_str + '</span>';
+    } else {
+      sub = '<span>正在获取交易所数据...</span>';
+    }
+    priceSubEl.innerHTML = sub;
+  } else {
+    priceEl.innerHTML = '<span class="loading-dots">正在获取数据...</span>';
+    priceSubEl.innerHTML = '<span>首次从交易所获取数据，可能需要几秒...</span>';
+    _prevPrice = null;
+  }
 
-        // ========== 测试预警 ==========
-        function testAlert() {
-            var btn = event.target;
-            var original = btn.textContent;
-            btn.textContent = '发送中...';
-            btn.disabled = true;
+  // 底部更新时间
+  const lut = document.getElementById('last-update-text');
+  if (lut) {
+    if (d.update_time_str) lut.textContent = '最后更新: ' + d.update_time_str;
+    else lut.textContent = '等待数据更新...';
+  }
 
-            fetch('/api/test_alert', { method: 'POST' })
-            .then(r => r.json())
-            .then(res => {
-                btn.textContent = original;
-                btn.disabled = false;
-                if (res.success) alert('测试预警已发送到飞书');
-                else alert('发送失败：' + (res.error || '未知错误'));
-            }).catch(err => {
-                btn.textContent = original;
-                btn.disabled = false;
-                alert('请求失败: ' + err);
-            });
-        }
+  // 下一次固定时间点推送
+  const fixedEl = document.getElementById('fixed-push-info');
+  if (fixedEl) {
+    const fixed = d.fixed_push_interval || 0;
+    if (fixed > 0 && d.next_fixed_push_time) {
+      let intervalText;
+      const minutes = fixed / 60;
+      if (minutes >= 60) intervalText = (minutes / 60) + '小时';
+      else intervalText = minutes + '分钟';
+      fixedEl.innerHTML = '· 下次播报 ' + d.next_fixed_push_time + '（每' + intervalText + '）';
+    } else {
+      fixedEl.textContent = '';
+    }
+  }
 
-        // ========== 加载系统状态 ==========
-        function loadState() {
-            _countdown = 30;
-            updateCountdown();
+  // 周期卡片
+  for (const tfKey of ['5m', '15m', '30m', '1h', '4h']) {
+    const tfCard = document.getElementById('tf-' + tfKey);
+    if (!tfCard) continue;
+    const s = states[tfKey];
+    const sigEl = tfCard.querySelector('.tf-signal');
+    const detEl = tfCard.querySelector('.tf-detail');
+    if (s) {
+      // 信号：用 CSS 圆形图标 + 文字
+      const signal = s.signal || 'between';
+      let dotColor = '#facc15';     // 观望黄色
+      let text = '观望';
+      if (signal === 'long') { dotColor = '#22c55e'; text = '开多'; }
+      else if (signal === 'short') { dotColor = '#ef4444'; text = '开空'; }
+      sigEl.innerHTML = '<span class="signal-dot" style="background:' + dotColor + '"></span> ' + text;
+      sigEl.className = 'tf-signal tf-' + signal;
+      detEl.innerHTML = '<div class="tf-price">价: $' + formatNumber(s.price, 2) + '</div>' +
+                        '<div class="tf-arrangement">' + (s.arrangement || '') + '</div>' +
+                        '<div class="tf-source">' + (s.data_source || 'gateio') + '</div>';
+    } else {
+      sigEl.innerHTML = '<span class="loading-dots">加载中...</span>';
+      detEl.textContent = '';
+    }
+  }
 
-            fetch('/api/state', { cache: 'no-store' })
-            .then(function(r) {
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-                return r.json();
-            })
-            .then(function(data) {
-                if (data.error) {
-                    console.error('加载状态失败:', data.error);
-                    document.getElementById('conn-status').textContent = '服务器错误：' + data.error;
-                    document.getElementById('conn-status').style.color = '#f87171';
-                    return;
-                }
+  // EMA 数值（取 5m 周期）
+  const s5m = states['5m'];
+  const emaShortLabel = document.getElementById('ema-short-label');
+  const emaLongLabel = document.getElementById('ema-long-label');
+  const emaShortBox = document.querySelector('#ema-short-box .ema-value');
+  const emaLongBox = document.querySelector('#ema-long-box .ema-value');
 
-                // 没数据时：显示加载状态并缩短下次刷新间隔
-                if (!data.has_data) {
-                    document.getElementById('status-dot').className = 'status-dot';
-                    document.getElementById('status-label').textContent = '正在获取数据...';
-                    document.getElementById('conn-status').textContent = '后台正在从交易所获取价格，请稍候...';
-                    document.getElementById('conn-status').style.color = '#fbbf24';
-                    document.getElementById('current-price').innerHTML = '<span class="loading-dots">正在获取数据</span>';
-                    document.getElementById('update-time').textContent = '首次加载中';
-                    // 没数据时每 3 秒重试一次，比 30 秒快
-                    if (!_hasLoadedOnce) {
-                        setTimeout(loadState, 3000);
-                    }
-                    return;
-                }
+  // 根据配置更新 EMA 标签
+  let esVal = 180, elVal = 250;
+  if (d.config && d.config.ema_alert) {
+    esVal = d.config.ema_alert.ema_short || 180;
+    elVal = d.config.ema_alert.ema_long || 250;
+  }
+  if (emaShortLabel) emaShortLabel.textContent = 'EMA ' + esVal;
+  if (emaLongLabel) emaLongLabel.textContent = 'EMA ' + elVal;
 
-                // 更新连接状态
-                if (data.status) updateStatus(data.status);
+  if (s5m) {
+    if (emaShortBox) emaShortBox.textContent = '$' + formatNumber(s5m.ema_short, 2);
+    if (emaLongBox) emaLongBox.textContent = '$' + formatNumber(s5m.ema_long, 2);
+  } else {
+    if (emaShortBox) emaShortBox.innerHTML = '<span class="loading-dots">计算中...</span>';
+    if (emaLongBox) emaLongBox.innerHTML = '<span class="loading-dots">计算中...</span>';
+  }
 
-                // 更新时间
-                if (data.update_time_str) {
-                    document.getElementById('update-time').textContent = data.update_time_str;
-                }
+  // 价格区间列表
+  renderPriceRanges(d.price_ranges || []);
+}
 
-                // 更新价格
-                if (data.latest_price) updatePrice(data.latest_price);
-                else document.getElementById('current-price').innerHTML = '<span class="loading-dots">等待交易所数据...</span>';
+function renderPriceRanges(list) {
+  const c = document.getElementById('range-list');
+  if (!list || list.length === 0) {
+    c.innerHTML = '<div class="range-empty">暂无价格区间，点击右上角「+ 添加区间」</div>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < list.length; i++) {
+    const r = list[i];
+    const enabledCls = r.enabled ? 'range-item' : 'range-item range-disabled';
+    html += '<div class="' + enabledCls + '">' +
+            '<div class="range-info">' +
+              '<div class="range-name">' + (r.name || ('区间 ' + (i + 1))) + '</div>' +
+              '<div class="range-values">价格 $' + formatNumber(r.low, 2) + ' ~ $' + formatNumber(r.high, 2) + '</div>' +
+              '<div class="range-band">缓冲带: $' + formatNumber(parseFloat(r.low) - 10, 2) + ' ~ $' + formatNumber(parseFloat(r.high) + 10, 2) + '</div>' +
+            '</div>' +
+            '<div class="range-actions">' +
+              '<button class="btn-toggle" onclick="toggleRange(' + i + ')">' + (r.enabled ? '已启用' : '已禁用') + '</button>' +
+              '<button class="btn-delete" onclick="deleteRange(' + i + ')">删除</button>' +
+            '</div></div>';
+  }
+  c.innerHTML = html;
+}
 
-                // 更新各周期状态
-                if (data.states) updateTFStates(data.states);
+// ====== 价格区间操作 ======
+function showAddRange() { document.getElementById('modal-range').style.display = 'flex'; }
+function hideAddRange() { document.getElementById('modal-range').style.display = 'none'; }
+function submitAddRange() {
+  const low = parseFloat(document.getElementById('range-low').value);
+  const high = parseFloat(document.getElementById('range-high').value);
+  const name = document.getElementById('range-name').value.trim();
+  const enabled = document.getElementById('range-enabled').checked;
+  if (!low || !high || low >= high) { alert('请填写正确的价格区间（下限 < 上限）'); return; }
+  fetch('/api/save_price_range', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ low, high, name, enabled })
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      hideAddRange();
+      renderPriceRanges(d.price_ranges || []);
+      document.getElementById('range-low').value = '';
+      document.getElementById('range-high').value = '';
+      document.getElementById('range-name').value = '';
+    } else alert('保存失败: ' + (d.error || '未知错误'));
+  }).catch(e => alert('请求失败: ' + e));
+}
+function toggleRange(idx) {
+  fetch('/api/toggle_price_range', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ index: idx })
+  }).then(r => r.json()).then(d => {
+    if (d.success) renderPriceRanges(d.price_ranges || []);
+    else alert('操作失败: ' + (d.error || '未知错误'));
+  }).catch(e => alert('请求失败: ' + e));
+}
+function deleteRange(idx) {
+  if (!confirm('确认删除该价格区间？')) return;
+  fetch('/api/delete_price_range', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ index: idx })
+  }).then(r => r.json()).then(d => {
+    if (d.success) renderPriceRanges(d.price_ranges || []);
+    else alert('删除失败: ' + (d.error || '未知错误'));
+  }).catch(e => alert('请求失败: ' + e));
+}
 
-                // 加载价格区间
-                loadPriceRanges(data.price_ranges);
+// ====== 倒计时 & 自动刷新 ======
+function startTick() {
+  if (_tickTimer) clearInterval(_tickTimer);
+  _tickTimer = setInterval(() => {
+    _countdown -= 1;
+    if (_countdown <= 0) {
+      loadState();  // 自动刷新
+    } else {
+      updateCountdown();
+    }
+  }, 1000);
+}
 
-                // 选中周期的详情
-                if (data.states) updateCurrentTFDetail(data.states);
-
-                _hasLoadedOnce = true;
-            })
-            .catch(function(err) {
-                console.error('加载状态失败:', err);
-                document.getElementById('conn-status').textContent = '网络异常，3秒后自动重试...';
-                document.getElementById('conn-status').style.color = '#f87171';
-                if (!_hasLoadedOnce) {
-                    setTimeout(loadState, 3000);
-                }
-            });
-        }
-
-        // ========== 更新状态指示 ==========
-        function updateStatus(status) {
-            var dot = document.getElementById('status-dot');
-            var label = document.getElementById('status-label');
-            var conn = document.getElementById('conn-status');
-
-            if (status.level === 'online') {
-                dot.className = 'status-dot online';
-                label.textContent = '在线';
-                conn.textContent = status.detail || '交易所连接正常';
-                conn.style.color = '#4ade80';
-            } else {
-                dot.className = 'status-dot offline';
-                label.textContent = '离线';
-                conn.textContent = status.detail || '连接异常';
-                conn.style.color = '#f87171';
-            }
-        }
-
-        // ========== 价格更新 + 变色动画 ==========
-        function updatePrice(price) {
-            var el = document.getElementById('current-price');
-            var priceNum = parseFloat(price);
-
-            if (!isNaN(priceNum) && priceNum > 0) {
-                var newVal = '$' + priceNum.toLocaleString('en-US', {
-                    minimumFractionDigits: 2, maximumFractionDigits: 2
-                });
-
-                if (_lastPrice === 0) {
-                    el.textContent = newVal;
-                    el.style.color = '#fff';
-                    _lastPrice = priceNum;
-                    return;
-                }
-
-                if (el.textContent !== newVal) {
-                    if (_lastPriceFlashTimer) {
-                        clearTimeout(_lastPriceFlashTimer);
-                        _lastPriceFlashTimer = null;
-                    }
-                    el.style.color = priceNum > _lastPrice ? '#4ade80' : '#f87171';
-                    el.textContent = newVal;
-                    _lastPrice = priceNum;
-                    _lastPriceFlashTimer = setTimeout(function() {
-                        el.style.color = '#fff';
-                        _lastPriceFlashTimer = null;
-                    }, 3000);
-                }
-            }
-        }
-
-        // ========== 周期信号更新 ==========
-        function updateTFStates(states) {
-            var tfs = ['5m', '15m', '30m', '1h', '4h'];
-            tfs.forEach(function(tf) {
-                var state = states[tf];
-                var signalEl = document.getElementById('tf-' + tf + '-signal');
-
-                if (state && signalEl) {
-                    var signal = state.signal_text;
-                    signalEl.textContent = signal || '观望';
-                    signalEl.className = 'signal';
-                    if (state.signal === '开多') signalEl.classList.add('buy');
-                    else if (state.signal === '开空') signalEl.classList.add('sell');
-                } else if (signalEl) {
-                    signalEl.textContent = '观望';
-                    signalEl.className = 'signal';
-                }
-            });
-        }
-
-        function selectTF(tf) {
-            _selectedTF = tf;
-            document.querySelectorAll('.tf-tab').forEach(function(el) { el.classList.remove('active'); });
-            var active = document.querySelector('.tf-tab[data-tf="' + tf + '"]');
-            if (active) active.classList.add('active');
-
-            fetch('/api/state').then(function(r) { return r.json(); }).then(function(data) {
-                if (data.states) updateCurrentTFDetail(data.states);
-            });
-        }
-
-        function updateCurrentTFDetail(states) {
-            var state = states[_selectedTF];
-            if (!state) return;
-
-            var emaShort = document.getElementById('ema-short');
-            var emaLong = document.getElementById('ema-long');
-
-            if (state.ema_short && typeof state.ema_short === 'number') {
-                emaShort.textContent = '$' + state.ema_short.toFixed(2);
-            } else {
-                    emaShort.innerHTML = '<span class="loading-dots">计算中</span>';
-                }
-
-            if (state.ema_long && typeof state.ema_long === 'number') {
-                emaLong.textContent = '$' + state.ema_long.toFixed(2);
-            } else {
-                emaLong.innerHTML = '<span class="loading-dots">计算中</span>';
-            }
-
-            document.getElementById('tf-update-time').textContent = state.update_time || '--';
-            document.getElementById('data-source').textContent = state.data_source || '--';
-
-            var arrEl = document.getElementById('arrangement');
-            arrEl.textContent = state.arrangement_text || '多头排列';
-            arrEl.className = 'detail-value ' + (state.arrangement === 'bull' ? 'bull' : 'bear');
-
-            var posEl = document.getElementById('position');
-            posEl.textContent = state.position_text || '区间外';
-            posEl.className = 'detail-value ' + (state.in_zone ? 'in-zone' : '');
-
-            var alertEl = document.getElementById('alert-status');
-            if (state.in_zone) {
-                alertEl.textContent = state.signal === '开多' ? '🟢 开多信号' : '🔴 开空信号';
-                alertEl.className = 'detail-value ' + (state.signal === '开多' ? 'bull' : 'bear');
-            } else {
-                alertEl.textContent = '⚪ 观望';
-                alertEl.className = 'detail-value';
-            }
-
-            if (state.price) {
-                document.getElementById('price-info').textContent =
-                    'EMA 180 · EMA 250 · 更新于 ' + (state.update_time || '--:--:--');
-            }
-        }
-
-        // ========== 价格区间 ==========
-        function loadPriceRanges(ranges) {
-            var list = document.getElementById('price-ranges-list');
-            if (!ranges || ranges.length === 0) {
-                list.innerHTML = '<div class="loading-text">点击上方「+ 添加区间」设置价格提醒</div>';
-                return;
-            }
-            list.innerHTML = ranges.map(function(r, idx) {
-                var enabledClass = r.enabled ? 'enabled' : 'disabled';
-                var toggleTxt = r.enabled ? 'ON' : 'OFF';
-                return (
-                    '<div class="price-range-item">' +
-                        '<div style="flex:1;">' +
-                            '<span style="font-weight:600;margin-right:10px;">' + (r.name || '区间' + (idx + 1)) + '</span>' +
-                            '<span style="color:#fbbf24;">$' + parseFloat(r.low).toFixed(2) + ' - $' + parseFloat(r.high).toFixed(2) + '</span>' +
-                        '</div>' +
-                        '<div class="action-group">' +
-                            '<button class="btn-toggle" onclick="togglePriceRange(' + idx + ')" style="min-width:60px;">' + toggleTxt + '</button>' +
-                            '<button class="btn-delete" onclick="deletePriceRange(' + idx + ')">删除</button>' +
-                        '</div>' +
-                    '</div>'
-                );
-            }).join('');
-        }
-
-        function showAddRangeModal() {
-            document.getElementById('add-range-modal').classList.add('active');
-        }
-        function closeAddRangeModal() {
-            document.getElementById('add-range-modal').classList.remove('active');
-            document.getElementById('range-name').value = '';
-            document.getElementById('range-low').value = '';
-            document.getElementById('range-high').value = '';
-        }
-
-        function addPriceRange() {
-            var name = document.getElementById('range-name').value;
-            var low = parseFloat(document.getElementById('range-low').value);
-            var high = parseFloat(document.getElementById('range-high').value);
-            if (isNaN(low) || isNaN(high) || low <= 0 || high <= 0 || low >= high)) {
-                alert('请输入有效的价格范围');
-                return;
-            }
-            fetch('/api/add_price_range', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name, low: low, high: high })
-            }).then(function(r) { return r.json(); }).then(function(res) {
-                if (res.success) {
-                    closeAddRangeModal();
-                    fetch('/api/state').then(function(r) { return r.json(); })
-                        .then(function(data) { loadPriceRanges(data.price_ranges); });
-                    alert('价格区间添加成功');
-                } else {
-                    alert('添加失败: ' + (res.error || '未知错误'));
-                }
-            }).catch(function(err) { alert('请求失败: ' + err); });
-        }
-
-        function togglePriceRange(idx) {
-            fetch('/api/toggle_price_range', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ index: idx })
-            }).then(function(r) { return r.json(); }).then(function(res) {
-                if (res.success) {
-                    fetch('/api/state').then(function(r) { return r.json(); })
-                        .then(function(data) { loadPriceRanges(data.price_ranges); });
-                } else {
-                    alert('操作失败: ' + (res.error || '未知错误'));
-                }
-            }).catch(function(err) { alert('请求失败: ' + err); });
-        }
-
-        function deletePriceRange(idx) {
-            if (!confirm('确定删除这个价格区间？')) return;
-            fetch('/api/delete_price_range', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ index: idx })
-            }).then(function(r) { return r.json(); }).then(function(res) {
-                if (res.success) {
-                    fetch('/api/state').then(function(r) { return r.json(); })
-                        .then(function(data) { loadPriceRanges(data.price_ranges); });
-                } else {
-                    alert('删除失败: ' + (res.error || '未知错误'));
-                }
-            }).catch(function(err) { alert('请求失败: ' + err); });
-        }
-
-        // ========== 初始化 ==========
-        document.addEventListener('DOMContentLoaded', function() {
-            // 绑定周期卡片点击
-            document.querySelectorAll('.tf-tab').forEach(function(tab) {
-                tab.addEventListener('click', function() {
-                    selectTF(tab.dataset.tf);
-                });
-            });
-
-            // 默认选中 15m
-            var defaultActive = document.querySelector('.tf-tab[data-tf="15m"]');
-            if (defaultActive) defaultActive.classList.add('active');
-
-            // 首次加载
-            loadState();
-
-            // 自动刷新循环：每30秒自动调用一次
-            setInterval(function() {
-                loadState();
-            }, 30000);
-
-            // 每秒倒计时
-            setInterval(function() {
-                _countdown--;
-                if (_countdown < 1) _countdown = 30;
-                updateCountdown();
-            }, 1000);
-        });
-    </script>
+// 启动
+document.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  startTick();
+});
+</script>
 </body>
 </html>
