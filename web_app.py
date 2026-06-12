@@ -15,6 +15,10 @@ import monitor as mon
 app = Flask(__name__)
 app.secret_key = 'eth-ema-alert-secret-key'
 
+# gunicorn 部署时，if __name__ == '__main__' 不会执行
+# 所以在模块级启动监控线程，确保 Render 云端也能正常获取数据
+mon.start_monitor_in_background()
+
 # ========== 页面路由 ==========
 @app.route('/')
 def index():
@@ -36,22 +40,12 @@ def api_state():
         push_interval = cfg.get('feishu', {}).get('price_push_interval_seconds', 14400)
         now = time.time()
         last_update = mon.get_last_update_time()
+        data_age = now - last_update if last_update > 0 else 999999
 
-        # 数据过期则后台异步更新，但立即返回当前状态不阻塞
-        data_age = now - last_update
-        if data_age > 40 and last_update > 0:
-            try:
-                mon.update_all_data()
-            except Exception:
-                pass
-        elif last_update == 0:
-            # 完全没有数据，快速初始化一次
-            try:
-                mon.update_all_data()
-            except Exception:
-                pass
+        # 确保监控线程在运行（第一次请求时启动）
+        mon.ensure_monitor_running()
 
-        # 再次获取
+        # 立即获取缓存数据，**永不阻塞**
         states = mon.get_all_states()
         last_update = mon.get_last_update_time()
         status = mon.get_connection_status()
@@ -69,17 +63,18 @@ def api_state():
             'status': status,
             'source_health': source_health,
             'last_update': last_update,
-            'update_time_str': datetime.fromtimestamp(last_update).strftime('%Y-%m-%d %H:%M:%S') if last_update > 0 else '--',
+            'update_time_str': datetime.fromtimestamp(last_update).strftime('%Y-%m-%d %H:%M:%S') if last_update > 0 else '正在获取数据...',
             'price_push_interval': push_interval,
             'latest_price': latest_price,
             'price_ranges': cfg.get('price_ranges', []),
             'config': cfg,
             'data_age_sec': int(data_age),
+            'has_data': latest_price is not None,
         }
         return jsonify(data)
     except Exception as e:
         mon.logger.error(f"获取状态失败: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'has_data': False}), 500
 
 # ========== 设置推送间隔 ==========
 @app.route('/api/set_push_interval')
@@ -292,16 +287,10 @@ if __name__ == '__main__':
     print("🚀 启动 ETH EMA 预警系统 Web 服务")
     print("=" * 50)
 
-    import threading
-    def start_monitor():
-        time.sleep(3)
-        mon.start_monitor_in_background()
-
-    t = threading.Thread(target=start_monitor, daemon=True)
-    t.start()
-
-    time.sleep(30)
+    # 立即启动监控线程（后台拉数据）
+    mon.start_monitor_in_background()
+    print("✅ 监控线程已启动，正在后台获取数据...")
 
     port = int(os.environ.get('PORT', 5000))
-    print(f"✅ Web 服务启动，访问 http://localhost:{port}")
+    print(f"✅ Web 服务就绪，访问 http://localhost:{port}")
     app.run(host='0.0.0.0', port=port, debug=False)

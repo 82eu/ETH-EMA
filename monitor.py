@@ -34,12 +34,15 @@ OKX_TF = {'5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H'}
 
 _state_cache = {}
 _state_lock = threading.Lock()
+_config_lock = threading.Lock()
 _last_update_time = 0
 _zone_tracker = {}
 _last_source = {}
 _last_price_push_time = 0
 _source_health = {}
 _last_price_value = 0
+_monitor_started = False
+_monitor_start_lock = threading.Lock()
 
 _DATA_SOURCES = []
 
@@ -728,6 +731,15 @@ def get_connection_status():
     return {'level': 'offline', 'label': '🔴 离线', 'detail': '所有交易所API暂时不可用，正在自动重试...'}
 
 def start_monitor_in_background():
-    t = threading.Thread(target=run_monitor_loop, daemon=True)
-    t.start()
-    return t
+    global _monitor_started
+    with _monitor_start_lock:
+        if _monitor_started:
+            return None
+        t = threading.Thread(target=run_monitor_loop, daemon=True)
+        t.start()
+        _monitor_started = True
+        return t
+
+def ensure_monitor_running():
+    """确保监控线程在运行 - web_app.py 启动时调用"""
+    return start_monitor_in_background()
