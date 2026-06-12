@@ -7,7 +7,7 @@ import time
 import traceback
 from datetime import datetime
 
-from flask import Flask, render_template, jsonify, request, redirect, flash
+from flask import Flask, render_template, jsonify, request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import monitor as mon
@@ -15,34 +15,20 @@ import monitor as mon
 app = Flask(__name__)
 app.secret_key = 'eth-ema-alert-secret-key'
 
-PRICE_PUSH_INTERVALS = [
-    {'value': 30, 'label': '30秒'},
-    {'value': 60, 'label': '1分钟'},
-    {'value': 300, 'label': '5分钟'},
-    {'value': 600, 'label': '10分钟'},
-    {'value': 1800, 'label': '30分钟'},
-    {'value': 3600, 'label': '1小时'},
-    {'value': 7200, 'label': '2小时'},
-    {'value': 14400, 'label': '4小时'},
-    {'value': 28800, 'label': '8小时'},
-    {'value': 43200, 'label': '12小时'},
-]
-
-def format_interval(seconds):
-    if seconds < 60:
-        return f"{seconds}秒"
-    elif seconds < 3600:
-        return f"{seconds//60}分钟"
-    else:
-        hours = seconds / 3600
-        if hours == int(hours):
-            return f"{int(hours)}小时"
-        return f"{hours}小时"
-
+# ========== 页面路由 ==========
 @app.route('/')
 def index():
     return render_template('dashboard.html')
 
+@app.route('/settings')
+def settings():
+    return render_template('settings.html')
+
+@app.route('/history')
+def history():
+    return render_template('history.html')
+
+# ========== 获取系统状态（前端主要 API）==========
 @app.route('/api/state')
 def api_state():
     try:
@@ -50,22 +36,27 @@ def api_state():
         last_update = mon.get_last_update_time()
         status = mon.get_connection_status()
         source_health = mon.get_source_health()
-        
+
         cfg = mon.load_config()
         push_interval = cfg.get('feishu', {}).get('price_push_interval_seconds', 14400)
-        
+
+        # 自动刷新过期数据
         now = time.time()
         if now - last_update > 35:
-            mon.update_all_data()
-            states = mon.get_all_states()
-            last_update = mon.get_last_update_time()
-        
+            try:
+                mon.update_all_data()
+                states = mon.get_all_states()
+                last_update = mon.get_last_update_time()
+            except Exception:
+                pass
+
+        # 提取最新价格
         latest_price = None
         for tf in ['5m', '15m', '30m', '1h', '4h']:
             if tf in states and states[tf]:
                 latest_price = states[tf].get('price')
                 break
-        
+
         data = {
             'states': states,
             'status': status,
@@ -73,46 +64,89 @@ def api_state():
             'last_update': last_update,
             'update_time_str': datetime.fromtimestamp(last_update).strftime('%Y-%m-%d %H:%M:%S'),
             'price_push_interval': push_interval,
-            'price_push_interval_label': format_interval(push_interval),
-            'price_push_interval_options': PRICE_PUSH_INTERVALS,
             'latest_price': latest_price,
+            'price_ranges': cfg.get('price_ranges', []),
+            'config': cfg,
         }
         return jsonify(data)
     except Exception as e:
+        mon.logger.error(f"获取状态失败: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ========== 设置推送间隔 ==========
 @app.route('/api/set_push_interval')
 def api_set_push_interval():
     try:
         interval = request.args.get('interval', '14400')
         seconds = int(interval)
-        
+
         valid_intervals = [30, 60, 300, 600, 1800, 3600, 7200, 14400, 28800, 43200]
         if seconds not in valid_intervals:
-            return jsonify({'success': False, 'error': '无效的间隔值，仅支持: 30秒/1分钟/5分钟/10分钟/30分钟/1小时/2小时/4小时/8小时/12小时'})
-        
+            return jsonify({'success': False, 'error': '无效的间隔值'})
+
         cfg = mon.load_config()
+        if 'feishu' not in cfg:
+            cfg['feishu'] = {}
         cfg['feishu']['price_push_interval_seconds'] = seconds
         mon.save_config(cfg)
-        
-        global _last_price_push_time
-        _last_price_push_time = 0
-        
-        return jsonify({
-            'success': True, 
-            'interval': seconds, 
-            'interval_label': format_interval(seconds),
-            'message': f'推送间隔已设置为 {format_interval(seconds)}'
-        })
+
+        return jsonify({'success': True, 'interval': seconds})
     except Exception as e:
         mon.logger.error(f"设置推送间隔失败: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
+# ========== 保存全部系统设置 ==========
+@app.route('/api/save_config', methods=['POST'])
+def api_save_config():
+    try:
+        data = request.get_json() or {}
+
+        webhook = str(data.get('feishu_webhook', '')).strip()
+        ema_short = int(data.get('ema_short', 180))
+        ema_long = int(data.get('ema_long', 250))
+        push_interval = int(data.get('push_interval', 14400))
+        cooldown_seconds = int(data.get('cooldown_seconds', 600))
+        enabled_timeframes = data.get('enabled_timeframes', [])
+
+        if ema_short >= ema_long:
+            return jsonify({'success': False, 'error': 'EMA短周期必须小于长周期'})
+
+        cfg = mon.load_config()
+
+        # 确保各部分的配置
+        if 'ema_alert' not in cfg:
+            cfg['ema_alert'] = {}
+        cfg['ema_alert']['ema_short'] = ema_short
+        cfg['ema_alert']['ema_long'] = ema_long
+        cfg['ema_alert']['enabled_timeframes'] = list(enabled_timeframes) if isinstance(enabled_timeframes, list) else []
+
+        # 飞书配置
+        if 'feishu' not in cfg:
+            cfg['feishu'] = {}
+        cfg['feishu']['webhook'] = webhook
+        cfg['feishu']['price_push_interval_seconds'] = push_interval
+
+        # 预警配置
+        if 'alert' not in cfg:
+            cfg['alert'] = {}
+        cfg['alert']['cooldown_seconds'] = cooldown_seconds
+
+        mon.save_config(cfg)
+
+        return jsonify({'success': True, 'message': '设置保存成功', 'config': cfg})
+    except Exception as e:
+        mon.logger.error(f"保存配置失败: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+# ========== 预警历史 ==========
 @app.route('/api/alerts')
 def api_alerts():
-    limit = int(request.args.get('limit', 10))
-    alerts = mon.get_recent_alerts(limit)
-    return jsonify(alerts)
+    try:
+        limit = int(request.args.get('limit', 20))
+        alerts = mon.get_recent_alerts(limit)
+        return jsonify(alerts)
+    except Exception as e:
+        return jsonify([])
 
 @app.route('/api/delete_alert', methods=['POST'])
 def api_delete_alert():
@@ -133,6 +167,7 @@ def api_clear_alerts():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# ========== 价格区间管理 ==========
 @app.route('/api/add_price_range', methods=['POST'])
 def api_add_price_range():
     try:
@@ -140,14 +175,14 @@ def api_add_price_range():
         name = data.get('name', '')
         low = float(data.get('low', 0))
         high = float(data.get('high', 0))
-        
+
         if low <= 0 or high <= 0 or low >= high:
             return jsonify({'success': False, 'error': '无效的价格范围'})
-        
+
         cfg = mon.load_config()
         if 'price_ranges' not in cfg or not isinstance(cfg['price_ranges'], list):
             cfg['price_ranges'] = []
-        
+
         cfg['price_ranges'].append({
             'name': name if name else f'区间{len(cfg["price_ranges"])+1}',
             'low': low,
@@ -164,7 +199,7 @@ def api_toggle_price_range():
     try:
         data = request.get_json()
         index = int(data.get('index', -1))
-        
+
         cfg = mon.load_config()
         if isinstance(cfg.get('price_ranges'), list) and 0 <= index < len(cfg['price_ranges']):
             cfg['price_ranges'][index]['enabled'] = not cfg['price_ranges'][index].get('enabled', True)
@@ -179,7 +214,7 @@ def api_delete_price_range():
     try:
         data = request.get_json()
         index = int(data.get('index', -1))
-        
+
         cfg = mon.load_config()
         if isinstance(cfg.get('price_ranges'), list) and 0 <= index < len(cfg['price_ranges']):
             cfg['price_ranges'].pop(index)
@@ -189,23 +224,27 @@ def api_delete_price_range():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# ========== 测试预警推送 ==========
 @app.route('/api/test_alert', methods=['POST'])
 def api_test_alert():
     try:
         cfg = mon.load_config()
         price = mon.get_latest_price()
         if price:
-            subject = f"[ETH EMA 测试预警] · ${price:.2f}"
-            body_text = f"测试预警消息\n当前价格: ${price:.2f}\n测试时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            
-            ok = mon.send_feishu(subject, body_text, cfg)
+            ok = mon.send_feishu(
+                f"[测试预警] ETH 当前价格",
+                f"测试预警消息\n当前价格: ${price:.2f}\n测试时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                cfg
+            )
             if ok:
                 return jsonify({'success': True, 'message': '测试预警已发送到飞书'})
-            return jsonify({'success': False, 'error': '飞书推送失败'})
+            return jsonify({'success': False, 'error': '飞书推送失败，请检查 webhook 配置'})
         return jsonify({'success': False, 'error': '暂无价格数据'})
     except Exception as e:
+        mon.logger.error(f"测试预警失败: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
+# ========== 手动刷新数据 ==========
 @app.route('/api/refresh_data')
 def api_refresh_data():
     try:
@@ -214,6 +253,22 @@ def api_refresh_data():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# ========== 健康检查 (用于 UptimeRobot) ==========
+@app.route('/health')
+def health_check():
+    try:
+        last_update = mon.get_last_update_time()
+        now = time.time()
+        if now - last_update > 60:
+            try:
+                mon.update_all_data()
+            except Exception:
+                pass
+        return jsonify({'ok': True, 'last_update': last_update})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# ========== 错误处理 ==========
 @app.errorhandler(404)
 def page_not_found(e):
     return jsonify({'error': '页面未找到'}), 404
@@ -223,20 +278,22 @@ def handle_exception(e):
     mon.logger.error(f"未捕获异常: {e}\n{traceback.format_exc()}")
     return jsonify({'error': str(e)}), 500
 
+# ========== 启动 ==========
 if __name__ == '__main__':
     print("=" * 50)
     print("🚀 启动 ETH EMA 预警系统 Web 服务")
     print("=" * 50)
-    
+
     import threading
     def start_monitor():
-        time.sleep(5)
+        time.sleep(3)
         mon.start_monitor_in_background()
-    
+
     t = threading.Thread(target=start_monitor, daemon=True)
     t.start()
-    
-    time.sleep(40)
-    
+
+    time.sleep(30)
+
     port = int(os.environ.get('PORT', 5000))
+    print(f"✅ Web 服务启动，访问 http://localhost:{port}")
     app.run(host='0.0.0.0', port=port, debug=False)
